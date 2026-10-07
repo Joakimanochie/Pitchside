@@ -1,0 +1,68 @@
+league,source,alias,suggested_canonical,match_type
+EPL,footballdata,Burnley,,none
+EPL,footballdata,Man City,,none
+EPL,footballdata,Man United,,none
+EPL,footballdata,Nott'm Forest,,none
+EPL,footballdata,West Ham,,none
+EPL,footballdata,Wolves,,none
+EPL,understat,Burnley,,none
+EPL,understat,West Ham,,none
+EPL,understat,Wolverhampton Wanderers,,none
+EPL,whoscored,Burnley,,none
+EPL,whoscored,West Ham,,none
+EPL,whoscored,Wolves,,none
+LALIGA,footballdata,Ath Bilbao,,none
+LALIGA,footballdata,Ath Madrid,,none
+LALIGA,footballdata,Espanol,Espanyol,close
+LALIGA,footballdata,Girona,,none
+LALIGA,footballdata,La Coruna,,none
+LALIGA,footballdata,Mallorca,,none
+LALIGA,footballdata,Oviedo,,none
+LALIGA,understat,Girona,,none
+LALIGA,understat,Mallorca,,none
+LALIGA,understat,Real Oviedo,,none
+LALIGA,whoscored,Deportivo Alaves,,none
+LALIGA,whoscored,Girona,,none
+LALIGA,whoscored,Mallorca,,none
+LALIGA,whoscored,Real Oviedo,,none
+BUNDESLIGA,footballdata,Ein Frankfurt,,none
+BUNDESLIGA,footballdata,FC Koln,,none
+BUNDESLIGA,footballdata,Heidenheim,,none
+BUNDESLIGA,footballdata,M'gladbach,,none
+BUNDESLIGA,footballdata,St Pauli,,none
+BUNDESLIGA,footballdata,Union Berlin,1. FC Union Berlin,close
+BUNDESLIGA,footballdata,Wolfsburg,,none
+BUNDESLIGA,understat,Borussia M.Gladbach,,none
+BUNDESLIGA,understat,FC Heidenheim,,none
+BUNDESLIGA,understat,Hamburger SV,Hamburg SV,close
+BUNDESLIGA,understat,St. Pauli,,none
+BUNDESLIGA,understat,Union Berlin,1. FC Union Berlin,close
+BUNDESLIGA,understat,Wolfsburg,,none
+BUNDESLIGA,whoscored,Borussia M.Gladbach,,none
+BUNDESLIGA,whoscored,FC Heidenheim,,none
+BUNDESLIGA,whoscored,FC Koln,,none
+BUNDESLIGA,whoscored,Hamburger SV,Hamburg SV,close
+BUNDESLIGA,whoscored,St. Pauli,,none
+BUNDESLIGA,whoscored,Union Berlin,1. FC Union Berlin,close
+BUNDESLIGA,whoscored,Wolfsburg,,none
+SERIEA,footballdata,Cremonese,,none
+SERIEA,footballdata,Inter,,none
+SERIEA,footballdata,Pisa,,none
+SERIEA,footballdata,Verona,,none
+SERIEA,understat,Cremonese,,none
+SERIEA,understat,Inter,,none
+SERIEA,understat,Pisa,,none
+SERIEA,understat,Verona,,none
+SERIEA,whoscored,Cremonese,,none
+SERIEA,whoscored,Inter,,none
+SERIEA,whoscored,Pisa,,none
+SERIEA,whoscored,Verona,,none
+LIGUE1,footballdata,Metz,,none
+LIGUE1,footballdata,Nantes,,none
+LIGUE1,footballdata,Rennes,,none
+LIGUE1,understat,Metz,,none
+LIGUE1,understat,Nantes,,none
+LIGUE1,understat,Rennes,,none
+LIGUE1,whoscored,Metz,,none
+LIGUE1,whoscored,Nantes,,none
+LIGUE1,whoscored,Rennes,,none

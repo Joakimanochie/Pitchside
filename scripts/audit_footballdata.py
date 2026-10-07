@@ -68,5 +68,5 @@ report.to_csv(OUT / "audit_footballdata.csv", index=False)
 print("\n", report.to_string(index=False))
 
 # Columns never mentioned in KEY_COLS, to spot extra stats we did not expect.
-extra = sorted(set(c for cols in all_cols.values() for c in cols) - {c for v in KEY_COLS.values() for c in v})
+extra = sorted({c for cols in all_cols.values() for c in cols} - {c for v in KEY_COLS.values() for c in v})
 print("\nOther columns present:", ", ".join(extra[:80]))

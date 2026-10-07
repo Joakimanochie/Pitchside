@@ -9,10 +9,16 @@ dependencies = [
     "requests",
     "soccerdata",
     "duckdb",
+    "psycopg[binary]>=3.3.6",
 ]
 
 [dependency-groups]
-dev = ["pytest", "ruff"]
+dev = [
+    "pgserver>=0.1.4",
+    "psycopg[binary]>=3.3.6",
+    "pytest",
+    "ruff",
+]
 
 [build-system]
 requires = ["hatchling"]

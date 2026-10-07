@@ -13,7 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 os.environ.setdefault("SOCCERDATA_DIR", str(ROOT / "data" / "raw" / "soccerdata"))
 
-import soccerdata as sd  # noqa: E402
+import soccerdata as sd
 
 LEAGUE = "ENG-Premier League"
 SEASON = "2025"  # soccerdata: 2025 = 2025/26
