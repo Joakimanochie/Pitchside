@@ -14,15 +14,6 @@ def ensure_model_version(conn: psycopg.Connection, version_id: str, description:
     )
 
 
-def existing_run(conn: psycopg.Connection, run_type: str, model_version_id: str, cutoff: datetime):
-    """A run of the same type and model with the same data cutoff, if any (guards against double-running)."""
-    return conn.execute(
-        "SELECT id FROM prediction_runs WHERE run_type = %s AND model_version_id = %s AND data_cutoff = %s "
-        "ORDER BY created_at DESC LIMIT 1",
-        (run_type, model_version_id, cutoff),
-    ).fetchone()
-
-
 def create_run(conn: psycopg.Connection, run_type: str, model_version_id: str, feature_version: str,
                data_cutoff: datetime, notes: str | None = None) -> str:
     return str(conn.execute(

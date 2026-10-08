@@ -1,6 +1,6 @@
 # Goals model report: Dixon-Coles, Premier League
 
-Generated 2026-10-08 from `scripts/tune_goals.py` and `scripts/backtest_goals.py`. Raw numbers: `data/processed/tune_goals.csv`, `backtest_goals_summary.csv`, `backtest_goals_predictions.csv`.
+Generated 2026-10-08 from `scripts/tune_goals.py` and `scripts/backtest_goals.py`. Raw numbers: `data/processed/tune_goals.csv`, `backtest_goals_epl_summary.csv`, `backtest_goals_epl_predictions.csv`.
 
 ## Model
 
@@ -47,3 +47,27 @@ By season (1X2 log loss, model vs bookmaker): 2022/23 1.007 vs 0.962; 2023/24 0.
 2. A prior for newly promoted teams instead of the league average.
 3. Separate home and away strengths, and a total-goals adjustment to fix the over/under bias.
 4. Only after those: consider whether adding the market odds as a model input is acceptable. It would likely close the gap on the result but would make the product a repackaging of the bookmaker's own view. This needs HEO's decision, since BUILD.md currently says odds are not an input.
+
+## Other leagues (Phase 1b)
+
+The same model with the same frozen settings (half-life 730 days, ridge 2, tuned on the Premier League only) was run
+unchanged on the other four leagues, over the same seasons 2022/23 to Sep 2026. `scripts/backtest_goals.py <LEAGUE>`
+reproduces each row; raw numbers are in `data/processed/backtest_goals_<league>_summary.csv`.
+
+| League | Matches | 1X2 log loss: model | league base rate | bookmaker | Right result: model / bookmaker | Over/under 2.5 log loss: model / base | Both teams to score: model / base |
+|---|---|---|---|---|---|---|---|
+| Premier League | 1570 | 0.9955 | 1.0691 | 0.9633 | 51.7% / 54.8% | 0.6813 / 0.6859 | 0.6881 / 0.6896 |
+| La Liga | 1589 | 0.9752 | 1.0625 | 0.9584 | 53.2% / 55.0% | 0.6733 / 0.6928 | 0.6872 / 0.6922 |
+| Bundesliga | 1260 | 0.9918 | 1.0726 | 0.9695 | 51.4% / 54.8% | 0.6539 / 0.6659 | 0.6682 / 0.6745 |
+| Serie A | 1570 | 0.9846 | 1.0864 | 0.9670 | 52.7% / 53.9% | 0.6928 / 0.6992 | 0.6937 / 0.6974 |
+| Ligue 1 | 1343 | 0.9986 | 1.0716 | 0.9799 | 52.0% / 53.6% | 0.6824 / 0.6927 | 0.6899 / 0.6908 |
+
+What this says:
+
+1. **The model works in every league.** It beats the base rate on the match result in all five, by a similar margin,
+   without any per-league tuning.
+2. **The gap to the bookmaker is similar everywhere** (about 0.017 to 0.032 log loss), and smallest in La Liga, Serie A
+   and Ligue 1. The Premier League is the league where the market is furthest ahead of this model.
+3. **Over/under 2.5 and both teams to score are better than the base rate in La Liga and the Bundesliga**, and only
+   marginally so in the other three.
+4. Tuning per league, or fitting one pooled model with league effects, is untested and may help the smaller leagues.

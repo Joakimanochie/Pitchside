@@ -8,7 +8,9 @@ from pitchside.db.teams import UnknownTeamsError, load_aliases, seed_leagues
 from pitchside.ingest.fixtures import parse_scoreboard, upsert_fixtures
 from pitchside.ingest.footballdata import RAW_DIR, load_seasons, season_code
 from pitchside.ingest.load_matches import load_footballdata
-from pitchside.markets.goals import MARKETS, price_match
+from pitchside.leagues import LEAGUES
+from pitchside.markets.goals import price_match
+from pitchside.markets.registry import MARKETS
 from pitchside.models.dixon_coles import DixonColes
 from pitchside.pipeline.weekly import (
     MODEL_PARAMS,
@@ -148,11 +150,11 @@ def test_predictions_equal_a_direct_fit_on_the_same_history(world):
     assert max(abs(stored[k] - expected[k]) for k in stored) < 1e-6
 
 
-def test_second_run_is_refused_unless_forced(world):
+def test_second_run_finds_nothing_new_unless_forced(world):
     upsert_fixtures(world, "EPL", fixtures_payload(event(1, in_days(2), "Arsenal", "Leeds United")))
     today = datetime.now(UTC).date()
     assert predict_week(world, "EPL", today, days=8)["run_id"]
-    assert "skipped" in predict_week(world, "EPL", today, days=8)
+    assert predict_week(world, "EPL", today, days=8)["run_id"] is None
     assert predict_week(world, "EPL", today, days=8, force=True)["run_id"]
     assert world.execute("SELECT count(*) FROM prediction_runs").fetchone()[0] == 2
 
@@ -181,3 +183,50 @@ def test_refuses_to_predict_without_enough_history(conn):
     with pytest.raises(InsufficientHistoryError, match="load_history.py"):
         predict_week(conn, "EPL", datetime.now(UTC).date(), days=8)
     assert conn.execute("SELECT count(*) FROM prediction_runs").fetchone()[0] == 0
+
+
+def test_a_match_is_predicted_once_per_model_version_across_daily_runs(world):
+    upsert_fixtures(world, "EPL", fixtures_payload(event(1, in_days(2), "Arsenal", "Leeds United")))
+    today = datetime.now(UTC).date()
+    first = predict_week(world, "EPL", today, days=8)
+    assert first["matches"] == 1
+    # the next day's run sees the same fixture plus a new one: only the new one is predicted
+    upsert_fixtures(world, "EPL", fixtures_payload(event(2, in_days(5), "Chelsea", "AFC Bournemouth")))
+    second = predict_week(world, "EPL", today + timedelta(days=1), days=8)
+    assert second["matches"] == 1
+    per_match = world.execute("SELECT match_id, count(DISTINCT run_id) FROM predictions GROUP BY 1").fetchall()
+    assert all(n == 1 for _, n in per_match) and len(per_match) == 2
+    # a third run with nothing new creates nothing
+    third = predict_week(world, "EPL", today + timedelta(days=2), days=8)
+    assert third["run_id"] is None and world.execute("SELECT count(*) FROM prediction_runs").fetchone()[0] == 2
+
+
+def test_one_league_failing_does_not_stop_the_others(conn, monkeypatch):
+    from pitchside.pipeline import weekly
+
+    calls = []
+
+    def fake_ingest(c, league_id, *a, **k):
+        if league_id == "LALIGA":
+            raise RuntimeError("football-data is down")
+        calls.append(("ingest", league_id))
+        return {"matches": 1}
+
+    monkeypatch.setattr(weekly, "ingest_results", fake_ingest)
+    monkeypatch.setattr(weekly, "plan_fixtures", lambda c, lid, start, days: calls.append(("fixtures", lid)) or {})
+    monkeypatch.setattr(weekly, "predict_week", lambda c, lid, as_of, days, force=False: calls.append(("predict", lid)) or {})
+    report, errors = weekly.run_leagues(conn, ["EPL", "LALIGA", "SERIEA"], days=5)
+
+    assert list(errors) == ["LALIGA/results"] and "football-data is down" in errors["LALIGA/results"]
+    assert ("predict", "EPL") in calls and ("predict", "SERIEA") in calls
+    assert report["EPL"]["results"] == {"matches": 1} and "settle" in report
+    assert conn.execute("SELECT count(*) FROM leagues").fetchone()[0] == len(LEAGUES)  # connection still usable
+
+
+def test_league_argument_parsing():
+    from pitchside.pipeline.weekly import parse_leagues
+
+    assert parse_leagues(["ALL"]) == sorted(LEAGUES)
+    assert parse_leagues(["epl", "laliga"]) == ["EPL", "LALIGA"]
+    with pytest.raises(SystemExit):
+        parse_leagues(["MARS"])

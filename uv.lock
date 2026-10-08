@@ -1140,7 +1140,6 @@ name = "pitchside"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "duckdb" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "pandas" },
@@ -1148,34 +1147,33 @@ dependencies = [
     { name = "requests" },
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "scipy", version = "1.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "soccerdata" },
 ]
 
 [package.dev-dependencies]
 dev = [
+    { name = "duckdb" },
     { name = "pgserver" },
-    { name = "psycopg", extra = ["binary"] },
     { name = "pytest" },
     { name = "ruff" },
+    { name = "soccerdata" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "duckdb" },
     { name = "numpy" },
     { name = "pandas" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.6" },
     { name = "requests" },
     { name = "scipy", specifier = ">=1.17.1" },
-    { name = "soccerdata" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "duckdb" },
     { name = "pgserver", specifier = ">=0.1.4" },
-    { name = "psycopg", extras = ["binary"], specifier = ">=3.3.6" },
     { name = "pytest" },
     { name = "ruff" },
+    { name = "soccerdata" },
 ]
 
 [[package]]

@@ -2,10 +2,11 @@
 
     uv run python -m pitchside.pipeline.weekly --league EPL --days 8
 
-Each step is safe to re-run. A second run on the same day with the same model is refused unless --force,
-so one set of inputs cannot become two competing track records by accident.
+Each step is safe to re-run. A match gets exactly one official weekly prediction per model version (made the
+first time it enters the window), so a daily schedule cannot create competing predictions. --force overrides.
 """
 import argparse
+import json
 import os
 from datetime import UTC, date, datetime, time, timedelta
 
@@ -17,7 +18,6 @@ from pitchside.db.migrate import _load_env, apply_migrations
 from pitchside.db.predictions import (
     create_run,
     ensure_model_version,
-    existing_run,
     write_predictions,
 )
 from pitchside.db.teams import load_aliases, seed_leagues
@@ -78,18 +78,21 @@ def load_history(conn: psycopg.Connection, league_id: str) -> pd.DataFrame:
 def predict_week(conn: psycopg.Connection, league_id: str, as_of: date, days: int, force: bool = False) -> dict:
     """Fit on matches before `as_of`, price every family A market for fixtures kicking off in the next `days` days."""
     now = datetime.now(UTC)
+    # One official weekly prediction per match per model version: a match already predicted is not predicted again,
+    # so a daily schedule cannot pile up competing predictions for the same match. --force bypasses this.
+    not_yet_predicted = "" if force else (
+        "AND NOT EXISTS (SELECT 1 FROM predictions p JOIN prediction_runs r ON r.id = p.run_id "
+        "WHERE p.match_id = m.id AND r.run_type = 'weekly' AND r.model_version_id = %s) ")
+    params = [league_id, as_of, as_of + timedelta(days=days), now] + ([] if force else [MODEL_VERSION])
     fixtures = conn.execute(
         "SELECT m.id, m.kickoff, th.canonical_name, ta.canonical_name FROM matches m "
         "JOIN teams th ON th.id = m.home_team_id JOIN teams ta ON ta.id = m.away_team_id "
         "WHERE m.league_id = %s AND m.status = 'scheduled' AND m.match_date >= %s AND m.match_date < %s "
-        "AND (m.kickoff IS NULL OR m.kickoff > %s) ORDER BY m.kickoff, m.id",
-        (league_id, as_of, as_of + timedelta(days=days), now)).fetchall()
+        "AND (m.kickoff IS NULL OR m.kickoff > %s) " + not_yet_predicted + "ORDER BY m.kickoff, m.id", params).fetchall()
     if not fixtures:
         return {"run_id": None, "matches": 0, "predictions": 0, "note": "no upcoming fixtures in the window"}
 
     cutoff = datetime.combine(as_of, time.min, tzinfo=UTC)
-    if not force and existing_run(conn, "weekly", MODEL_VERSION, cutoff):
-        return {"run_id": None, "matches": len(fixtures), "predictions": 0, "skipped": "run already exists (use --force)"}
 
     history = load_history(conn, league_id)
     if len(history) < MIN_HISTORY_MATCHES:
@@ -112,28 +115,59 @@ def predict_week(conn: psycopg.Connection, league_id: str, as_of: date, days: in
     return {"run_id": run_id, "matches": len(fixtures), "predictions": total}
 
 
-def run(conn: psycopg.Connection, league_id: str, days: int = 8, force: bool = False, ingest: bool = True) -> dict:
+def run_leagues(conn: psycopg.Connection, league_ids: list[str], days: int = 8, force: bool = False,
+                ingest: bool = True) -> tuple[dict, dict]:
+    """Run the pipeline for several leagues. One league failing never stops the others.
+    Returns (report, errors); errors maps league (or 'settle') to the failure message."""
     apply_migrations(conn)
     seed_leagues(conn)
     load_aliases(conn)
     conn.commit()
-    report = {}
+    report: dict = {lid: {} for lid in league_ids}
+    errors: dict = {}
+
+    def attempt(key: str, section: str, fn, *args):
+        try:
+            result = fn(*args)
+            if key in report:
+                report[key][section] = result
+            else:
+                report[key] = result
+        except Exception as e:  # noqa: BLE001 - isolate failures, report them, keep going
+            conn.rollback()
+            errors[f"{key}/{section}"] = f"{type(e).__name__}: {e}"
+
     if ingest:
-        report["results"] = ingest_results(conn, league_id)
-    report["settled"] = settle_all(conn)
+        for lid in league_ids:
+            attempt(lid, "results", ingest_results, conn, lid)
+    attempt("settle", "all", settle_all, conn)  # one global pass: settles every league's finished matches
     today = datetime.now(UTC).date()
-    report["fixtures"] = plan_fixtures(conn, league_id, today, days)
-    report["predictions"] = predict_week(conn, league_id, today, days, force)
-    return report
+    for lid in league_ids:
+        attempt(lid, "fixtures", plan_fixtures, conn, lid, today, days)
+        attempt(lid, "predictions", predict_week, conn, lid, today, days, force)
+    return report, errors
+
+
+def parse_leagues(values: list[str]) -> list[str]:
+    ids = sorted(LEAGUES) if [v.upper() for v in values] == ["ALL"] else [v.upper() for v in values]
+    unknown = [i for i in ids if i not in LEAGUES]
+    if unknown:
+        raise SystemExit(f"unknown league(s): {unknown}; choose from {sorted(LEAGUES)} or ALL")
+    return ids
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--league", default="EPL", choices=sorted(LEAGUES))
+    ap.add_argument("--league", nargs="+", default=["ALL"], help="league ids (EPL LALIGA ...) or ALL")
     ap.add_argument("--days", type=int, default=8)
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--no-ingest", action="store_true")
     args = ap.parse_args()
     _load_env()
     with psycopg.connect(os.environ["DATABASE_URL"]) as c:
-        print(run(c, args.league, args.days, args.force, not args.no_ingest))
+        rep, errs = run_leagues(c, parse_leagues(args.league), args.days, args.force, not args.no_ingest)
+    print(json.dumps(rep, indent=1, default=str))
+    if errs:
+        failures = [f"  {k}: {v}" for k, v in errs.items()]
+        print("FAILURES:", *failures, sep="\n")
+        raise SystemExit(1)

@@ -1,0 +1,42 @@
+name: Pitchside pipeline
+
+# Every day: ingest new results, settle past predictions, load the next fixtures, and store one official
+# prediction for each match that has just entered the window. Safe to re-run: every step is idempotent and
+# a match is predicted once per model version.
+on:
+  schedule:
+    - cron: "0 7 * * *"   # 07:00 UTC daily
+  workflow_dispatch:       # run it by hand from the Actions tab
+
+# Never run two pipelines at once against the same database.
+concurrency:
+  group: pitchside-pipeline
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install runtime dependencies only
+        run: uv sync --frozen --no-dev
+
+      - name: Run the pipeline (all leagues)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -o pipefail
+          uv run --frozen --no-dev python -m pitchside.pipeline.weekly --league ALL --days 5 | tee report.txt
+          {
+            echo "### Pipeline report"
+            echo '```'
+            cat report.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
