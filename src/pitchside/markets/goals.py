@@ -17,9 +17,9 @@ def _fixed(options: list[str]):
     return lambda line: list(options)
 
 
-def _market(id_, name, options, outcome, has_line=False, lines=()):
+def _market(id_, name, options, outcome, has_line=False, lines=(), exclusive=True):
     sel = options if callable(options) else _fixed(options)
-    return Market(id_, FAMILY, name, sel, outcome, has_line, tuple(lines))
+    return Market(id_, FAMILY, name, sel, outcome, has_line, tuple(lines), exclusive)
 
 
 # ---- result -----------------------------------------------------------------------------------------------
@@ -166,7 +166,7 @@ GOAL_BOUNDS_TEAM = ["0", "0-1", "0-2", "1", "1-2", "1-3+", "2", "2-3+", "3+"]  #
 
 MARKETS: dict[str, Market] = {m.id: m for m in [
     _market("1x2", "1X2", ["home", "draw", "away"], _x12),
-    _market("double_chance", "Double Chance", ["1x", "12", "x2"], _double_chance),
+    _market("double_chance", "Double Chance", ["1x", "12", "x2"], _double_chance, exclusive=False),
     _market("draw_no_bet", "Draw No Bet", ["home", "away"], _draw_no_bet),
     _market("home_no_bet", "Home No Bet", ["draw", "away"], _home_no_bet),
     _market("away_no_bet", "Away No Bet", ["home", "draw"], _away_no_bet),
@@ -191,12 +191,12 @@ MARKETS: dict[str, Market] = {m.id: m for m in [
     _market("win_to_nil_away", "Away Team to Win to Nil", YES_NO, _yes_no(lambda h, a: (a > h) & (h == 0))),
     _market("winning_margin", "Winning Margin",
             ["home_1", "home_2", "home_3+", "away_1", "away_2", "away_3+", "draw"], _winning_margin),
-    _market("excluded_goals", "Excluded Number of Goals", ["0", "1", "2", "3", "4", "5+"], _excluded(TOTAL)),
-    _market("excluded_goals_home", "Excluded Number of Goals - Home", ["0", "1", "2", "3+"], _excluded(HOME)),
-    _market("excluded_goals_away", "Excluded Number of Goals - Away", ["0", "1", "2", "3+"], _excluded(AWAY)),
-    _market("goal_bounds", "Goal Bounds", GOAL_BOUNDS_TOTAL, _bucketed(TOTAL)),
-    _market("goal_bounds_home", "Goal Bounds - Home", GOAL_BOUNDS_TEAM, _bucketed(HOME)),
-    _market("goal_bounds_away", "Goal Bounds - Away", GOAL_BOUNDS_TEAM, _bucketed(AWAY)),
+    _market("excluded_goals", "Excluded Number of Goals", ["0", "1", "2", "3", "4", "5+"], _excluded(TOTAL), exclusive=False),
+    _market("excluded_goals_home", "Excluded Number of Goals - Home", ["0", "1", "2", "3+"], _excluded(HOME), exclusive=False),
+    _market("excluded_goals_away", "Excluded Number of Goals - Away", ["0", "1", "2", "3+"], _excluded(AWAY), exclusive=False),
+    _market("goal_bounds", "Goal Bounds", GOAL_BOUNDS_TOTAL, _bucketed(TOTAL), exclusive=False),
+    _market("goal_bounds_home", "Goal Bounds - Home", GOAL_BOUNDS_TEAM, _bucketed(HOME), exclusive=False),
+    _market("goal_bounds_away", "Goal Bounds - Away", GOAL_BOUNDS_TEAM, _bucketed(AWAY), exclusive=False),
     _market("no_draw_btts", "No Draw Both Teams To Score", YES_NO, _yes_no(lambda h, a: (h > 0) & (a > 0) & (h != a))),
     _market("correct_score", "Correct Score", CORRECT_SCORES + ["other"], _correct_score),
     _market("multiscores", "Multiscores", [*MULTISCORE_GROUPS, "other_home", "other_away", "draw"], _multiscores),

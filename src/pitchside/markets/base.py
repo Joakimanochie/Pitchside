@@ -53,6 +53,7 @@ class Market:
     outcome: Callable[[str, float | None, np.ndarray, np.ndarray], np.ndarray]
     has_line: bool = False
     lines: tuple[float, ...] = ()  # default lines to price (empty for markets without a line)
+    exclusive: bool = True  # selections cannot both happen, so a single 'pick' is meaningful
 
     def codes(self, selection: str, line: float | None, home: np.ndarray, away: np.ndarray) -> np.ndarray:
         if selection not in self.selections(line):

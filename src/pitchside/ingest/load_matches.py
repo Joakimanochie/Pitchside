@@ -3,6 +3,8 @@
 Batched: bulk upsert of matches, one lookup of their ids, bulk upsert of stats. This keeps a remote
 database (Supabase) to a handful of round trips instead of one per row.
 """
+from datetime import UTC, datetime, timedelta
+
 import pandas as pd
 import psycopg
 
@@ -23,6 +25,8 @@ def load_footballdata(conn: psycopg.Connection, league_id: str, df: pd.DataFrame
     resolver = TeamResolver(conn)
     ids = resolver.resolve_all(SOURCE, [*df["home"], *df["away"]])
     rows = list(df.itertuples(index=False))
+
+    _reconcile_scheduled(conn, league_id, rows, ids)
 
     match_params = [
         (league_id, int(r.season), r.match_date, ids[r.home], ids[r.away], _v(r.ft_home), _v(r.ft_away),
@@ -68,3 +72,25 @@ def load_footballdata(conn: psycopg.Connection, league_id: str, df: pd.DataFrame
             stat_params,
         )
     return {"matches": len(match_params), "team_stats": len(stat_params)}
+
+
+RECONCILE_DAYS = 45  # only recent results can belong to a fixture we scheduled earlier
+MAX_DATE_SHIFT = 7   # a rescheduled match is matched to its fixture if the date moved by at most this many days
+
+
+def _reconcile_scheduled(conn: psycopg.Connection, league_id: str, rows: list, ids: dict) -> None:
+    """If a fixture we scheduled has been played on a different date, move it to the real date first so the
+    result updates that row instead of creating a second one (which would leave the first unsettled forever)."""
+    cutoff = (datetime.now(UTC) - timedelta(days=RECONCILE_DAYS)).date()
+    params = [
+        (r.match_date, league_id, int(r.season), ids[r.home], ids[r.away], r.match_date, r.match_date, MAX_DATE_SHIFT)
+        for r in rows if r.match_date >= cutoff
+    ]
+    if params:
+        with conn.cursor() as cur:
+            cur.executemany(
+                "UPDATE matches SET match_date = %s WHERE league_id = %s AND season = %s AND home_team_id = %s "
+                "AND away_team_id = %s AND status IN ('scheduled', 'postponed') AND match_date <> %s "
+                "AND abs(match_date - %s::date) <= %s",
+                params,
+            )
