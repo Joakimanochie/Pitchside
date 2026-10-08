@@ -33,7 +33,7 @@ def add_prediction(conn, run_id, selection="home", p=0.6, line=None):
 def test_migrations_apply_once(conn):
     assert apply_migrations(conn) == []  # second call applies nothing
     names = [r[0] for r in conn.execute("SELECT name FROM schema_migrations ORDER BY name")]
-    assert names == ["001_warehouse.sql", "002_predictions.sql", "003_settlements.sql"]
+    assert names == ["001_warehouse.sql", "002_predictions.sql", "003_settlements.sql", "004_security_hardening.sql"]
 
 
 def test_predictions_are_append_only(conn):
@@ -124,3 +124,14 @@ def test_settlement_rules_and_view(conn):
     )
     row = conn.execute("SELECT league_id, family, result FROM v_settled").fetchone()
     assert row == ("EPL", "A", "won")
+
+
+def test_every_public_table_has_row_level_security(conn):
+    unprotected = [r[0] for r in conn.execute(
+        "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND NOT rowsecurity")]
+    assert unprotected == []
+
+
+def test_settled_view_respects_caller_rights(conn):
+    opts = conn.execute("SELECT reloptions FROM pg_class WHERE relname = 'v_settled'").fetchone()[0]
+    assert "security_invoker=true" in opts
