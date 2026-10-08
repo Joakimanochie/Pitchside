@@ -25,8 +25,10 @@ from pitchside.ingest.fixtures import fetch_fixtures, upsert_fixtures
 from pitchside.ingest.footballdata import current_season, load_seasons
 from pitchside.ingest.load_matches import load_footballdata
 from pitchside.leagues import LEAGUES
-from pitchside.markets.goals import MARKETS, price_match
+from pitchside.markets.goals import price_match
+from pitchside.markets.registry import MARKETS
 from pitchside.models.dixon_coles import DixonColes
+from pitchside.settle.settle import settle_all
 
 MODEL_VERSION = "goals-dc-0.1.0"
 FEATURE_VERSION = "scores-only-v1"
@@ -118,6 +120,7 @@ def run(conn: psycopg.Connection, league_id: str, days: int = 8, force: bool = F
     report = {}
     if ingest:
         report["results"] = ingest_results(conn, league_id)
+    report["settled"] = settle_all(conn)
     today = datetime.now(UTC).date()
     report["fixtures"] = plan_fixtures(conn, league_id, today, days)
     report["predictions"] = predict_week(conn, league_id, today, days, force)
