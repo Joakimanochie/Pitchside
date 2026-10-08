@@ -2,12 +2,14 @@
 
 Output columns (one row per match): see COLUMNS. Missing values are NaN, never 0.
 """
+import logging
 from datetime import UTC, date, datetime
 from pathlib import Path
 
 import pandas as pd
 import requests
 
+log = logging.getLogger(__name__)
 ROOT = Path(__file__).resolve().parents[3]
 RAW_DIR = ROOT / "data" / "raw" / "footballdata"
 URL = "https://www.football-data.co.uk/mmz4281/{code}/{div}.csv"
@@ -42,9 +44,18 @@ def download_season(div: str, start_year: int, raw_dir: Path = RAW_DIR, refresh:
         refresh = start_year == current_season()
     if refresh or not dest.exists():
         url = URL.format(code=season_code(start_year), div=div)
-        r = requests.get(url, timeout=30)
-        r.raise_for_status()
-        dest.write_bytes(r.content)
+        last_error = None
+        for _ in range(3):
+            try:
+                r = requests.get(url, timeout=30)
+                r.raise_for_status()
+                dest.write_bytes(r.content)
+                return dest
+            except requests.RequestException as e:
+                last_error = e
+        if not dest.exists():  # nothing cached to fall back on
+            raise last_error
+        log.warning("refresh of %s failed (%s); using the cached copy", url, last_error)
     return dest
 
 
