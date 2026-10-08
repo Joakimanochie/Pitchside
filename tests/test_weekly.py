@@ -1,4 +1,5 @@
 import datetime as dt
+import json
 from datetime import UTC, datetime, timedelta
 
 import psycopg
@@ -230,3 +231,82 @@ def test_league_argument_parsing():
     assert parse_leagues(["epl", "laliga"]) == ["EPL", "LALIGA"]
     with pytest.raises(SystemExit):
         parse_leagues(["MARS"])
+
+
+# ---- the full simulator path ------------------------------------------------------------------------------------------------
+
+def add_synthetic_goal_minutes(conn):
+    """Self-consistent goal events for every finished match: goals placed in the right half with random minutes."""
+    rng = __import__("numpy").random.default_rng(0)
+    rows = conn.execute("SELECT id, home_team_id, away_team_id, ft_home, ft_away, ht_home, ht_away FROM matches "
+                        "WHERE status = 'finished' AND ht_home IS NOT NULL").fetchall()
+    events, ids = [], []
+    for mid, hid, aid, fh, fa, hh, ha in rows:
+        ids.append(mid)
+        for side, team, ft_n, ht_n in (("home", hid, fh, hh), ("away", aid, fa, ha)):
+            for k in range(ft_n):
+                first = k < ht_n
+                minute = int(rng.integers(1, 46)) if first else int(rng.integers(46, 91))
+                events.append((mid, team, "goal", 1 if first else 2, minute, json.dumps({"side": side}), "understat"))
+    with conn.cursor() as cur:
+        cur.executemany("INSERT INTO match_events (match_id, team_id, event_type, period, minute, details, source) "
+                        "VALUES (%s,%s,%s,%s,%s,%s,%s)", events)
+        cur.execute("UPDATE matches SET source_ids = source_ids || '{\"goal_minutes\": true}'::jsonb WHERE id = ANY(%s)", (ids,))
+    conn.commit()
+
+
+@pytest.fixture()
+def world_sim(world):
+    add_synthetic_goal_minutes(world)
+    return world
+
+
+def test_prediction_run_prices_every_family_and_stores_context_once_per_match(world_sim):
+    from pitchside.sim.inputs import fit_split_table, fit_time_profile
+    from pitchside.sim.pricing import price_all
+
+    upsert_fixtures(world_sim, "EPL", fixtures_payload(event(1, in_days(2), "Arsenal", "Leeds United"),
+                                                       event(2, in_days(2), "Chelsea", "AFC Bournemouth")))
+    out = predict_week(world_sim, "EPL", datetime.now(UTC).date(), days=8, n_sims=3000)
+    assert out["families"] == "ABCDE" and out["matches"] == 2
+    per_match = len(price_all(__import__("numpy").full((11, 11), 1 / 121), fit_split_table(world_sim), fit_time_profile(world_sim), 200, seed=0))
+    assert out["predictions"] == 2 * per_match and per_match > 900
+    fams = {r[0] for r in world_sim.execute("SELECT DISTINCT mk.family FROM predictions p JOIN markets mk ON mk.id = p.market_id")}
+    assert fams == {"A", "B", "C", "D", "E"}
+    assert world_sim.execute("SELECT count(*) FROM predictions WHERE probability < 0 OR probability > 1").fetchone()[0] == 0
+    ctx = world_sim.execute("SELECT count(*), count(DISTINCT match_id) FROM prediction_context").fetchone()
+    assert ctx == (2, 2)                                           # once per match, not once per prediction row
+    c = world_sim.execute("SELECT context FROM prediction_context LIMIT 1").fetchone()[0]
+    assert c["families"] == "ABCDE" and c["n_sims"] == 3000 and c["lambda_home"] > 0
+    # rows carry no copy of the context: 'why' is empty unless a push is possible
+    assert world_sim.execute("SELECT count(*) FROM predictions WHERE why ? 'lambda_home'").fetchone()[0] == 0
+
+
+def test_family_a_stays_exact_while_the_simulated_families_agree_with_it(world_sim):
+    upsert_fixtures(world_sim, "EPL", fixtures_payload(event(1, in_days(2), "Arsenal", "Leeds United")))
+    predict_week(world_sim, "EPL", datetime.now(UTC).date(), days=8, n_sims=20_000)
+    rows = {(m, None if ln is None else float(ln), s): float(p) for m, ln, s, p in
+            world_sim.execute("SELECT market_id, line, selection, probability FROM predictions")}
+    # exact family A prices and simulated families describe the same match: related events must agree
+    home_win = rows[("1x2", None, "home")]
+    sim_home_win = sum(v for (m, ln, s), v in rows.items() if m == "x12_ou_25" and s.startswith("home&"))
+    assert sim_home_win == pytest.approx(home_win, abs=0.012)
+    p_over = rows[("ou_total", 2.5, "over")]
+    assert sum(v for (m, ln, s), v in rows.items() if m == "x12_ou_25" and s.endswith("&over")) == pytest.approx(p_over, abs=0.012)
+    assert 1 - sum(v for (m, ln, s), v in rows.items() if m == "first_goal" and s == "none") == pytest.approx(1 - rows[("correct_score", None, "0:0")], abs=0.012)
+
+
+def test_without_verified_goal_minutes_only_family_a_is_priced_and_says_so(world):
+    upsert_fixtures(world, "EPL", fixtures_payload(event(1, in_days(2), "Arsenal", "Leeds United")))
+    out = predict_week(world, "EPL", datetime.now(UTC).date(), days=8)
+    assert out["families"] == "A"
+    assert world.execute("SELECT DISTINCT mk.family FROM predictions p JOIN markets mk ON mk.id = p.market_id").fetchall() == [("A",)]
+    assert world.execute("SELECT context ->> 'families' FROM prediction_context").fetchone()[0] == "A"
+
+
+def test_context_is_append_only(world_sim):
+    upsert_fixtures(world_sim, "EPL", fixtures_payload(event(1, in_days(2), "Arsenal", "Leeds United")))
+    predict_week(world_sim, "EPL", datetime.now(UTC).date(), days=8, n_sims=1000)
+    with pytest.raises(psycopg.errors.RaiseException, match="append-only"):
+        world_sim.execute("UPDATE prediction_context SET context = '{}'")
+    world_sim.rollback()

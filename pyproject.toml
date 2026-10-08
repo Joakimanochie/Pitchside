@@ -9,15 +9,15 @@ dependencies = [
     "requests",
     "psycopg[binary]>=3.3.6",
     "scipy>=1.17.1",
+    "soccerdata",   # only the daily goal-minutes step uses it (Understat)
 ]
 
 [dependency-groups]
-# Not needed by the scheduled job: tests (pgserver), data-source audit scripts (soccerdata), local analysis (duckdb).
+# Not needed by the scheduled job: tests (pgserver) and local analysis (duckdb).
 dev = [
     "pgserver>=0.1.4",
     "pytest",
     "ruff",
-    "soccerdata",
     "duckdb",
 ]
 

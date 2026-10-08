@@ -42,7 +42,7 @@ def write_predictions(conn: psycopg.Connection, run_id: str, match_id: int, rows
     params = [
         (run_id, match_id, r["market_id"], r["line"], r["selection"], round(r["probability"], 6),
          (r["market_id"], r["line"], r["selection"]) in picks,
-         json.dumps({**why, "p_push": round(r["p_push"], 6)}))
+         json.dumps({**why, **({"p_push": round(r["p_push"], 6)} if r["p_push"] > 0.0005 else {})}))
         for r in rows
     ]
     with conn.cursor() as cur:
@@ -52,3 +52,8 @@ def write_predictions(conn: psycopg.Connection, run_id: str, match_id: int, rows
             params,
         )
     return len(params)
+
+
+def write_context(conn: psycopg.Connection, run_id: str, match_id: int, context: dict) -> None:
+    conn.execute("INSERT INTO prediction_context (run_id, match_id, context) VALUES (%s, %s, %s)",
+                 (run_id, match_id, json.dumps(context)))

@@ -22,6 +22,7 @@ from pitchside.ingest.footballdata import load_seasons
 from pitchside.ingest.load_matches import load_footballdata
 from pitchside.ingest.understat_goals import load_goals
 from pitchside.leagues import LEAGUES
+from pitchside.pipeline.goal_minutes import read_season_events
 
 
 def run(conn: psycopg.Connection, first: int, last: int, league_ids: list[str], load_results: bool) -> None:
@@ -37,7 +38,8 @@ def run(conn: psycopg.Connection, first: int, last: int, league_ids: list[str], 
             conn.commit()
         for season in range(first, last + 1):
             us = sd.Understat(lg.understat, str(season))
-            out = load_goals(conn, lid, season, us.read_shot_events().reset_index(), us.read_schedule().reset_index())
+            schedule = us.read_schedule().reset_index()
+            out = load_goals(conn, lid, season, read_season_events(us, schedule), schedule)
             conn.commit()
             finished = conn.execute("SELECT count(*) FROM matches WHERE league_id = %s AND season = %s AND status = 'finished'",
                                     (lid, season)).fetchone()[0]

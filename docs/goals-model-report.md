@@ -100,3 +100,47 @@ What this says:
    That is the game-state effect (trailing sides push, leading sides sit back). It matters for HT/FT, "win from
    behind", "lead by N at any time" and "1UP". The simulator's game-state layer exists to fix this, and the fix has to
    be judged against these numbers.
+
+## Match simulator (Phase 2): families B to E
+
+The simulator samples a full-time score from the goals model, splits it into halves with the **empirical half-time table**
+(real P(half-time score | full-time score) from 12,679 matches, 2015 to 2021, five leagues pooled), and places each goal in
+its half with a **goal-timing profile** fitted on 9,998 verified goals from 2023 and 2024. Family A prices stay exactly the
+goals model's; families B to E (142 markets, 705 selections per match) come from the simulated matches.
+
+**Empirical half-time table versus the simple independent split** (held-out 2022/23 onwards, `scripts/backtest_halves.py`).
+The table moves the predicted comeback frequencies toward the real ones, but the log-loss gain is small and not uniform:
+HT/FT (9-way) improves by 0.002 to 0.003 in the Premier League, La Liga and Serie A and is unchanged in the Bundesliga and
+Ligue 1. Some under-prediction of comebacks remains (Premier League: a team leading at half-time loses 2.4% of matches
+predicted against 3.0% actual). It is never materially worse, so it is used.
+
+**Held-out validation of the whole simulator** (`scripts/backtest_sim.py`). Goal-timing profile fitted on seasons up to 2024,
+half-time table on seasons up to 2021, goals model refit weekly on earlier matches, and 500 randomly chosen verified matches
+from 2025/26 and 2026/27 scored. Each selection is compared with the base rate (how often it happened in the 2023 and 2024
+verified matches). Skill is the share of the base-rate log loss removed.
+
+| Family | Selections | Model log loss | Base-rate log loss | Skill |
+|---|---|---|---|---|
+| B. Halves | 211 | 0.4941 | 0.5129 | +3.7% |
+| C. Game flow | 52 | 0.4834 | 0.5161 | +6.3% |
+| D. Minutes tab | 161 | 0.4602 | 0.4718 | +2.5% |
+| E. Combinations | 281 | 0.3613 | 0.3727 | +3.0% |
+
+**Calibration is very good**: over about 330,000 priced selections, the average predicted probability is within about one
+percentage point of the actual frequency in every bucket from 0-2% to 98-100% (for example, selections priced at 70 to 80%
+happened 75.5% of the time; those priced at 2 to 5% happened 3.7% of the time).
+
+What this says:
+
+1. **The simulator's probabilities can be taken at face value.** They are well calibrated across the whole range, including the
+   long shots that dominate the combination and exact-score style markets.
+2. **It adds information over the base rate in every family, but not much in the pure-timing markets.** The clearest gains are
+   in the markets that depend on which team is stronger (leading by N, winning either or both halves, goals in a row, half-time
+   draw-no-bet and handicaps, +8% to +13%). Markets that depend mainly on the *amount* of scoring and its timing (first-goal
+   interval, goals in the first 5 to 25 minutes, first-half odd/even) are within a fraction of a percent of the base rate.
+   That is expected: nothing in the model says when a particular match will be early or late.
+3. **No market is materially worse than the base rate.** The worst is away team to win from behind (-1.4%, on very few
+   events), then a handful within a few tenths of a percent.
+4. **Limits.** 500 matches is a sample, so a single market's skill number is noisy and only the family-level and the
+   calibration results are firm. The goal-timing profile is one pooled distribution for all teams and leagues; a team that
+   scores early or late more than average is not modelled.

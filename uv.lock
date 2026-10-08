@@ -1147,6 +1147,7 @@ dependencies = [
     { name = "requests" },
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "scipy", version = "1.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "soccerdata" },
 ]
 
 [package.dev-dependencies]
@@ -1155,7 +1156,6 @@ dev = [
     { name = "pgserver" },
     { name = "pytest" },
     { name = "ruff" },
-    { name = "soccerdata" },
 ]
 
 [package.metadata]
@@ -1165,6 +1165,7 @@ requires-dist = [
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.6" },
     { name = "requests" },
     { name = "scipy", specifier = ">=1.17.1" },
+    { name = "soccerdata" },
 ]
 
 [package.metadata.requires-dev]
@@ -1173,7 +1174,6 @@ dev = [
     { name = "pgserver", specifier = ">=0.1.4" },
     { name = "pytest" },
     { name = "ruff" },
-    { name = "soccerdata" },
 ]
 
 [[package]]

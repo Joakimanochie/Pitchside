@@ -211,7 +211,13 @@ def test_score_grid_shape():
     assert h.shape == a.shape == (4, 4) and h[2, 1] == 2 and a[2, 1] == 1
 
 
-def test_seed_markets_is_idempotent(conn):
+def test_seed_markets_registers_every_family_and_is_idempotent(conn):
+    from pitchside.markets.goals import MARKETS as FAMILY_A
+    from pitchside.markets.registry import MARKETS as EVERY_MARKET
+
     n = seed_markets(conn)
     seed_markets(conn)
-    assert conn.execute("SELECT count(*) FROM markets WHERE family = 'A'").fetchone()[0] == n == len(MARKETS)
+    assert n == len(EVERY_MARKET) > len(FAMILY_A)
+    assert conn.execute("SELECT count(*) FROM markets").fetchone()[0] == len(EVERY_MARKET)
+    assert conn.execute("SELECT count(*) FROM markets WHERE family = 'A'").fetchone()[0] == len(FAMILY_A)
+    assert {r[0] for r in conn.execute("SELECT DISTINCT family FROM markets")} == {"A", "B", "C", "D", "E"}

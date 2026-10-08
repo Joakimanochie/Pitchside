@@ -13,8 +13,11 @@ import numpy as np
 from scipy.stats import binom
 
 
-def split_tensor(p: np.ndarray, p1: float) -> np.ndarray:
-    """J[h, a, i, j]: joint probability of full-time score h-a and half-time score i-j."""
+def split_tensor(p: np.ndarray, p1) -> np.ndarray:
+    """J[h, a, i, j]: joint probability of full-time score h-a and half-time score i-j.
+    `p1` is either the first-half goal share (independent split) or a HalfSplitTable (empirical split)."""
+    if hasattr(p1, "tensor"):
+        return p1.tensor(p)
     n = p.shape[0]
     g = np.arange(n)
     b = binom.pmf(g[None, :], g[:, None], p1)  # b[h, i] = P(i first-half goals | h goals)

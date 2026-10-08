@@ -147,7 +147,7 @@ def test_build_outcomes_records_scores_and_coverage(db):
     assert build_outcomes(db) == 1
     record, coverage = db.execute("SELECT record, coverage FROM match_outcomes WHERE match_id = %s", (mid,)).fetchone()
     assert (record["ft_home"], record["ft_away"], record["ht_home"], record["ht_away"]) == (2, 1, 1, 0)
-    assert coverage == {"ft": True, "ht": True, "team_stats": False}
+    assert coverage == {"ft": True, "ht": True, "team_stats": False, "goal_minutes": False}
 
 
 def test_track_record_views_separate_live_from_backtest(db):
@@ -210,3 +210,50 @@ def test_stored_and_settled_scores_equal_the_models_own_probabilities(conn):
         "count(*) FILTER (WHERE s.result IN ('lost','half_lost')) l FROM predictions p JOIN settlements s ON s.prediction_id = p.id "
         "WHERE p.market_id IN ('ou_total','btts','draw_no_bet') GROUP BY 1,2,3) t WHERE w > 1 OR l > 1").fetchone()[0]
     assert n_bad == 0
+
+
+# ---- families B-E: record-based markets ------------------------------------------------------------------------------------
+
+def add_goal_events(conn, match_id, goals):
+    """goals: (side, period, minute). Marks the match's goal minutes as verified."""
+    for side, period, minute in goals:
+        conn.execute(
+            "INSERT INTO match_events (match_id, team_id, event_type, period, minute, details, source) VALUES "
+            "(%s, (SELECT CASE WHEN %s = 'home' THEN home_team_id ELSE away_team_id END FROM matches WHERE id = %s), "
+            "'goal', %s, %s, jsonb_build_object('side', %s::text), 'understat')", (match_id, side, match_id, period, minute, side))
+    conn.execute("UPDATE matches SET source_ids = source_ids || '{\"goal_minutes\": true}'::jsonb WHERE id = %s", (match_id,))
+
+
+def test_half_and_combination_markets_settle_from_scores_alone(db):
+    mid = make_match(db, "finished", (3, 2))
+    db.execute("UPDATE matches SET ht_home = 1, ht_away = 0 WHERE id = %s", (mid,))
+    predict(db, mid, [row("ht_ft", "home/home", 0.4), row("1x2_h1", "home", 0.5),
+                      row("x12_ou_25", "home&over", 0.3), row("highest_scoring_half", "2nd", 0.45)])
+    out = settle_all(db)
+    assert out["by_result"] == {"won": 4}
+    assert settlement(db, "ht_ft", "home/home")[:2] == ("won", 1.0)
+    assert settlement(db, "highest_scoring_half", "2nd")[0] == "won"       # second half ended 2-2: more than the 1 first-half goal
+
+
+def test_goal_minute_markets_wait_for_verified_minutes_then_settle(db):
+    mid = make_match(db, "finished", (3, 2))
+    db.execute("UPDATE matches SET ht_home = 1, ht_away = 0 WHERE id = %s", (mid,))
+    predict(db, mid, [row("first_goal", "home", 0.6), row("lead_by_away", "yes", 0.2, 1.0), row("1x2", "home", 0.7)])
+    out = settle_all(db)
+    assert out["by_result"] == {"not_scorable": 2, "won": 1}
+    assert settlement(db, "first_goal", "home")[4]["reason"] == "goal_minutes_unverified"
+
+    # the minutes are verified later: 20' H, 50' A, 60' H, 70' A, 88' H
+    add_goal_events(db, mid, [("home", 1, 20), ("away", 2, 50), ("home", 2, 60), ("away", 2, 70), ("home", 2, 88)])
+    out = settle_all(db)
+    assert out["settled"] == 2                     # only the two that were waiting
+    assert settlement(db, "first_goal", "home")[:2] == ("won", 1.0)
+    assert settlement(db, "lead_by_away", "yes", 1.0)[:2] == ("lost", 0.0)   # the away side never led
+    assert settlement(db, "1x2", "home")[0] == "won" and settle_all(db)["settled"] == 0
+
+
+def test_a_match_without_a_half_time_score_cannot_settle_half_markets(db):
+    mid = make_match(db, "finished", (1, 0))
+    predict(db, mid, [row("1x2_h1", "home", 0.5), row("1x2", "home", 0.6)])
+    settle_all(db)
+    assert settlement(db, "1x2_h1", "home")[4]["reason"] == "no_half_time_score" and settlement(db, "1x2", "home")[0] == "won"
