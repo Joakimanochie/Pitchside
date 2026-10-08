@@ -3,6 +3,26 @@
 Working title: **Pitchside** (rename freely).
 Builder: HEO. Executor: Claude Code. Read `CLAUDE.md` first for the gstack setup.
 
+## Status and order of work (updated 2026-10-08)
+
+**Done and running**
+- Phase 0 data audit (`docs/data-audit.md`).
+- Phase 1 and 1b: Supabase schema, five leagues loaded (about 20,000 matches, 167 clubs), the Dixon-Coles goals model with an honest backtest (`docs/goals-model-report.md`), 34 result-and-goals markets (family A), frozen append-only predictions, the settle step and track-record views, and a daily GitHub Actions pipeline (`docs/operations.md`).
+- First live predictions were stored on 2026-10-08: 48 matches across the five leagues. They settle automatically once the matches are played.
+
+**Order from here (agreed with HEO on 2026-10-08)**
+1. **Phase 2**: goal timing, the match simulator, and families B to E (halves, game flow, minutes, combos).
+2. **Confidence tiers** (the backtest part of Phase 4), so every prediction can carry a tier.
+3. **Phase 5**: the product screens (fixtures, match board, deep-dive, track record).
+4. Along the way: **check the first live settlement** (after the 9 to 12 Oct matches) and fix anything it exposes. Then **improve the model** (xG signal, a prior for newly promoted teams, the over/under fix) using backtest and live evidence together.
+5. Later, not blocking the above: Phase 3 (corners, cards, shots), Phase 6 (players), Phase 7 (odds comparison, case study).
+
+**What depends on what**
+- Phase 2 needs goal-minute data for all five leagues (Understat). It does not need live results.
+- The screens only read the database, so they work with whatever model version is live. They need HEO's decision on Streamlit versus a custom web app (section 15) and a design pass (`/office-hours`, `/plan-design-review`).
+- The track-record screen shows settled results, so the first live settlement should be checked before that screen is trusted.
+- A better model later plugs in as a new model version. The goal-timing layer takes expected goals as an input, so it does not need rebuilding. Old predictions stay under the old version.
+
 ## 1. Goal
 
 Cover **every match, in every game week, across the major European leagues**, not a single fixture. For each upcoming match, and for **every market a betting site offers** on it, the system gives a prediction, a probability and a confidence level, built from statistics.
@@ -255,13 +275,13 @@ Match_Outcome/
 
 Ship in layers, because data quality drops sharply from goals to players.
 
-**Phase 0: Data audit.** For the golden match and one full past season, pull every source in section 6, for the Premier League and each Big 5 league. Write `docs/data-audit.md`: columns that exist, coverage, failures, rate limits, **per league**. Map each market family to "data available / partial / missing" per league. Also check each league's betting-site market list against `docs/market-catalogue.md`. *Done when HEO reviews it and agrees the v1 scope.*
+**Phase 0: Data audit. [DONE]** For the golden match and one full past season, pull every source in section 6, for the Premier League and each Big 5 league. Write `docs/data-audit.md`: columns that exist, coverage, failures, rate limits, **per league**. Map each market family to "data available / partial / missing" per league. Also check each league's betting-site market list against `docs/market-catalogue.md`. *Done when HEO reviews it and agrees the v1 scope.*
 
-**Phase 1: Database, goals foundation, and the first settle loop (Premier League pilot, league-agnostic code).** First create the Supabase project (with HEO's go-ahead), the migrations in `db/migrations/` for the warehouse and prediction tables (section 12a), and the team alias table. Then ingest 10+ seasons of results and half-time goals into Postgres. Build the form features (opponent-adjusted, recency weighted) and head-to-head. Scoreline model plus baselines. Resolvers for family A. *Done when 1X2, over/under, GG/NG, double chance, handicaps and correct score reproduce from one command for the golden match and match the analytic matrix, predictions for a game week are stored in Postgres, and the settle step scores them against real results (family A) once the matches are played.*
+**Phase 1: Database, goals foundation, and the first settle loop (Premier League pilot, league-agnostic code). [DONE, except checking the first live settlement]** First create the Supabase project (with HEO's go-ahead), the migrations in `db/migrations/` for the warehouse and prediction tables (section 12a), and the team alias table. Then ingest 10+ seasons of results and half-time goals into Postgres. Build the form features (opponent-adjusted, recency weighted) and head-to-head. Scoreline model plus baselines. Resolvers for family A. *Done when 1X2, over/under, GG/NG, double chance, handicaps and correct score reproduce from one command for the golden match and match the analytic matrix, predictions for a game week are stored in Postgres, and the settle step scores them against real results (family A) once the matches are played.*
 
-**Phase 1b: Add the Big 5 and the weekly batch.** Add La Liga, Bundesliga, Serie A and Ligue 1 as league config, retrain the pooled model, and build `pipeline/weekly.py` so one command predicts a full game week across all leagues. *Done when a full game week for all five leagues runs unattended, with per-league calibration reports.*
+**Phase 1b: Add the Big 5 and the weekly batch. [DONE]** Add La Liga, Bundesliga, Serie A and Ligue 1 as league config, retrain the pooled model, and build `pipeline/weekly.py` so one command predicts a full game week across all leagues. *Done when a full game week for all five leagues runs unattended, with per-league calibration reports.*
 
-**Phase 2: Simulator, halves, game flow, minutes, combos.** Families B, C, D, E. *Done when consistency tests pass.*
+**Phase 2: Simulator, halves, game flow, minutes, combos. [NEXT]** Families B, C, D, E. *Done when consistency tests pass.*
 
 **Phase 3: Count markets.** Corners, cards, shots, shots on target (F, G, H) from football-data.co.uk columns first. *Done when each has a calibration report.*
 
@@ -284,8 +304,8 @@ Ship in layers, because data quality drops sharply from goals to players.
 
 ## 15. Open questions for HEO
 
-0. **Which leagues are "major" for v1?** Proposed: Premier League first, then La Liga, Bundesliga, Serie A, Ligue 1. Add the next tier and the European cups later?
-0b. Decided: **Supabase Postgres** is the production database. Still open: where the scheduled job and the API are hosted (GitHub Actions cron plus a small container service, or similar), and the Supabase plan and region.
+Decided: leagues for v1 are the Big 5 (Premier League, La Liga, Bundesliga, Serie A, Ligue 1); the next tier and the European cups come later if wanted. **Supabase Postgres** is the production database. The scheduled job runs on **GitHub Actions** (daily, `.github/workflows/pipeline.yml`). Still open: where the API and the web app are hosted (Phase 5).
+
 1. Which other betting sites should we read market lists from?
 2. Is v1 limited to families A to H (no players), as proposed?
 3. Streamlit (fast) or custom web UI (more product-like)?

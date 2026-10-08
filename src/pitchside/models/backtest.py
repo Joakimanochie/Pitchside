@@ -105,3 +105,20 @@ def score(pred: pd.DataFrame) -> dict:
             res["ou25_logloss_book"] = binary_ll(book_over, over[has])
             res["ou25_logloss_model_same_rows"] = binary_ll(pred.loc[has, "p_over25"].to_numpy(), over[has])
     return res
+
+
+def iter_matrices(matches: pd.DataFrame, eval_seasons: list[int], half_life_days: float, ridge: float,
+                  step_days: int = 7, model_cls=DixonColes):
+    """Walk-forward like `walk_forward`, but yield (match_row, full_time_matrix) so any market can be evaluated.
+    Every fit uses only matches strictly before the block it predicts."""
+    matches = matches.sort_values("match_date").reset_index(drop=True)
+    target = matches[matches["season"].isin(eval_seasons)]
+    block_start, end = target["match_date"].min(), target["match_date"].max()
+    while block_start <= end:
+        block_end = block_start + timedelta(days=step_days)
+        block = target[(target["match_date"] >= block_start) & (target["match_date"] < block_end)]
+        if len(block):
+            model = model_cls(half_life_days=half_life_days, ridge=ridge).fit(matches, as_of=block_start)
+            for r in block.itertuples(index=False):
+                yield r, model.score_matrix(r.home, r.away)
+        block_start = block_end

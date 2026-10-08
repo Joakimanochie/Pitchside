@@ -71,3 +71,32 @@ What this says:
 3. **Over/under 2.5 and both teams to score are better than the base rate in La Liga and the Bundesliga**, and only
    marginally so in the other three.
 4. Tuning per league, or fitting one pooled model with league effects, is untested and may help the smaller leagues.
+
+## Half-time model (Phase 2, first step)
+
+Each goal falls in the first half independently with probability `p1`, so the half-time score and the second-half score
+follow exactly from the full-time scoreline matrix (`src/pitchside/models/halves.py`; it reproduces the exact Poisson
+identities in `tests/test_halves.py`). `p1` was estimated on 2015/16 to 2021/22 only and frozen. The goals model is
+refit weekly on past matches only, and everything is scored on 2022/23 to Sep 2026 against league base rates
+(`scripts/backtest_halves.py <LEAGUE>`). Log loss, lower is better; model / base rate:
+
+| League | p1 | Half-time result | Second-half result | HT/FT (9 outcomes) |
+|---|---|---|---|---|
+| Premier League | 0.447 | 1.0507 / 1.0855 | 1.0636 / 1.0970 | 1.9068 / 1.9839 |
+| La Liga | 0.434 | 1.0292 / 1.0618 | 1.0391 / 1.0902 | 1.8742 / 1.9595 |
+| Bundesliga | 0.436 | 1.0362 / 1.0941 | 1.0552 / 1.0918 | 1.8572 / 1.9492 |
+| Serie A | 0.435 | 1.0309 / 1.0802 | 1.0378 / 1.0947 | 1.8793 / 1.9854 |
+| Ligue 1 | 0.437 | 1.0494 / 1.0901 | 1.0527 / 1.0916 | 1.8719 / 1.9497 |
+
+What this says:
+
+1. **The split model works in every league**: it beats the base rate on all three, by a similar margin everywhere. The
+   share of goals before half-time is stable at 43% to 45%.
+2. **Over/under on half-time goals is only marginally better than the base rate** (Ligue 1 half-time over 0.5 is slightly
+   worse). The model also under-predicts "at least one first-half goal" in four of five leagues (for example Premier
+   League 71.7% predicted against 73.9% actual), the same low-scoring bias seen at full time.
+3. **Real football has more comebacks than independent goals allow.** In the Premier League, a team leading at half-time
+   goes on to lose 3.0% of the time against 2.0% predicted, and a team behind at half-time goes on to win 3.2% against 2.4%.
+   That is the game-state effect (trailing sides push, leading sides sit back). It matters for HT/FT, "win from
+   behind", "lead by N at any time" and "1UP". The simulator's game-state layer exists to fix this, and the fix has to
+   be judged against these numbers.
