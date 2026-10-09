@@ -1,0 +1,184 @@
+{
+ "calibration": [
+  {
+   "from": 0.0,
+   "to": 0.02,
+   "n": 28964,
+   "predicted": 0.008,
+   "actual": 0.01
+  },
+  {
+   "from": 0.02,
+   "to": 0.05,
+   "n": 32387,
+   "predicted": 0.035,
+   "actual": 0.037
+  },
+  {
+   "from": 0.05,
+   "to": 0.1,
+   "n": 36203,
+   "predicted": 0.073,
+   "actual": 0.069
+  },
+  {
+   "from": 0.1,
+   "to": 0.2,
+   "n": 57432,
+   "predicted": 0.147,
+   "actual": 0.143
+  },
+  {
+   "from": 0.2,
+   "to": 0.3,
+   "n": 42818,
+   "predicted": 0.248,
+   "actual": 0.246
+  },
+  {
+   "from": 0.3,
+   "to": 0.4,
+   "n": 34071,
+   "predicted": 0.348,
+   "actual": 0.35
+  },
+  {
+   "from": 0.4,
+   "to": 0.5,
+   "n": 26527,
+   "predicted": 0.448,
+   "actual": 0.444
+  },
+  {
+   "from": 0.5,
+   "to": 0.6,
+   "n": 24686,
+   "predicted": 0.55,
+   "actual": 0.555
+  },
+  {
+   "from": 0.6,
+   "to": 0.7,
+   "n": 20203,
+   "predicted": 0.648,
+   "actual": 0.648
+  },
+  {
+   "from": 0.7,
+   "to": 0.8,
+   "n": 16654,
+   "predicted": 0.749,
+   "actual": 0.755
+  },
+  {
+   "from": 0.8,
+   "to": 0.9,
+   "n": 14787,
+   "predicted": 0.85,
+   "actual": 0.859
+  },
+  {
+   "from": 0.9,
+   "to": 0.95,
+   "n": 7297,
+   "predicted": 0.925,
+   "actual": 0.931
+  },
+  {
+   "from": 0.95,
+   "to": 0.98,
+   "n": 3833,
+   "predicted": 0.964,
+   "actual": 0.966
+  },
+  {
+   "from": 0.98,
+   "to": 1.0,
+   "n": 3070,
+   "predicted": 0.992,
+   "actual": 0.993
+  }
+ ],
+ "families": [
+  {
+   "family": "B",
+   "selections": 211,
+   "model": 0.4941,
+   "base": 0.5129,
+   "skill": 0.0366
+  },
+  {
+   "family": "C",
+   "selections": 52,
+   "model": 0.4834,
+   "base": 0.5161,
+   "skill": 0.0634
+  },
+  {
+   "family": "D",
+   "selections": 161,
+   "model": 0.4602,
+   "base": 0.4718,
+   "skill": 0.0245
+  },
+  {
+   "family": "E",
+   "selections": 281,
+   "model": 0.3613,
+   "base": 0.3727,
+   "skill": 0.0304
+  }
+ ],
+ "leagues": [
+  {
+   "id": "EPL",
+   "name": "Premier League",
+   "matches": 1570,
+   "model": 0.9955067023403346,
+   "base": 1.069107965750074,
+   "book": 0.9633231046077515,
+   "right_model": 0.5165605095541401,
+   "right_book": 0.5484076433121019
+  },
+  {
+   "id": "LALIGA",
+   "name": "La Liga",
+   "matches": 1589,
+   "model": 0.9751868608980356,
+   "base": 1.062472360922123,
+   "book": 0.9584266406137746,
+   "right_model": 0.5317809943360604,
+   "right_book": 0.5500314663310258
+  },
+  {
+   "id": "BUNDESLIGA",
+   "name": "Bundesliga",
+   "matches": 1260,
+   "model": 0.9918421826625544,
+   "base": 1.0725994814018667,
+   "book": 0.9694716393187915,
+   "right_model": 0.5142857142857142,
+   "right_book": 0.5484126984126985
+  },
+  {
+   "id": "SERIEA",
+   "name": "Serie A",
+   "matches": 1570,
+   "model": 0.9845585950208326,
+   "base": 1.0864047278496392,
+   "book": 0.9670201457428783,
+   "right_model": 0.5273885350318471,
+   "right_book": 0.5388535031847134
+  },
+  {
+   "id": "LIGUE1",
+   "name": "Ligue 1",
+   "matches": 1343,
+   "model": 0.9986225147010395,
+   "base": 1.0715672903778448,
+   "book": 0.9798699178931781,
+   "right_model": 0.5197319434102755,
+   "right_book": 0.5361131794489948
+  }
+ ]
+}

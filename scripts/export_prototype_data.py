@@ -22,6 +22,7 @@ from pitchside.markets.registry import MARKETS
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "web" / "prototype" / "data" / "snapshot.json"
 PROCESSED = ROOT / "data" / "processed"
+CACHE = ROOT / "web" / "validation.json"
 
 
 def validation() -> dict:
@@ -47,6 +48,17 @@ def validation() -> dict:
                         "right_model": float(row["1x2_accuracy_model"]), "right_book": float(row["1x2_accuracy_book"]),
                     })
     return out
+
+
+def validation_cached() -> dict:
+    """The backtest log is not in git, so the parsed numbers are kept in a committed file and reused where it is absent (CI)."""
+    fresh = validation()
+    if fresh["calibration"] and fresh["families"]:
+        CACHE.write_text(json.dumps(fresh, indent=1), encoding="utf-8")
+        return fresh
+    if CACHE.exists():
+        return json.loads(CACHE.read_text(encoding="utf-8"))
+    return fresh
 
 
 def main() -> None:
@@ -79,7 +91,7 @@ def main() -> None:
     snapshot = {
         "generated_at": datetime.now(UTC).isoformat(timespec="seconds"), "model_version": version,
         "leagues": {lid: lg.name for lid, lg in LEAGUES.items()}, "markets": markets, "fixtures": fixtures,
-        "preds": {str(mid): preds[mid] for mid in ids}, "validation": validation(),
+        "preds": {str(mid): preds[mid] for mid in ids}, "validation": validation_cached(),
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(snapshot, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
