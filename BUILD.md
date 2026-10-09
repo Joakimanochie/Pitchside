@@ -17,11 +17,11 @@ Builder: HEO. Executor: Claude Code. Read `CLAUDE.md` first for the gstack setup
 2. **Confidence tiers** (the backtest part of Phase 4), so every prediction can carry a tier.
 3. **Phase 5**: the product screens (fixtures, match board, deep-dive, track record).
 4. Along the way: **check the first live settlement** (after the 9 to 12 Oct matches) and fix anything it exposes. Then **improve the model** (xG signal, a prior for newly promoted teams, the over/under fix) using backtest and live evidence together.
-5. Later, not blocking the above: Phase 3 (corners, cards, shots), Phase 6 (players), Phase 7 (odds comparison, case study).
+5. Later, not blocking the above: Phase 3 (corners, cards, shots), Phase 6 (players), Phase 7 (odds comparison).
 
 **What depends on what**
 - Phase 2 needs goal-minute data for all five leagues (Understat). It does not need live results.
-- The screens only read the database, so they work with whatever model version is live. They need HEO's decision on Streamlit versus a custom web app (section 15) and a design pass (`/office-hours`, `/plan-design-review`).
+- The screens only read the database, so they work with whatever model version is live. The web app is a custom build on Cloudflare (decided); they need a design pass (`/office-hours`, `/plan-design-review`).
 - The track-record screen shows settled results, so the first live settlement should be checked before that screen is trusted.
 - A better model later plugs in as a new model version. The goal-timing layer takes expected goals as an input, so it does not need rebuilding. Old predictions stay under the old version.
 
@@ -41,9 +41,12 @@ The **market list comes from the betting sites** (SportyBet first, others later)
 
 Reference fixture and **golden test match** (used for end-to-end testing, not the product's scope): Arsenal vs Leeds United, Sat 10 Oct 2026, 12:30, `sr:match:72221292`. SportyBet shows 262 market headers for it (full list in `docs/market-catalogue.md`).
 
-Two outputs from one codebase:
-1. A **product** for individuals: pick a league and game week, then open any match to see a board of every market with the prediction, probability, confidence and the statistics behind it.
-2. A **portfolio case study** (HEO is a product manager): data audit, honest evaluation, product decisions, what did not work.
+One output from this codebase, a **product**, with this plan for who uses it:
+- **Now: private, for HEO only.** Used to test how the predictions fare against real results. No accounts, not public.
+- **Later: a subscription product.** Once the early results are good, it opens to paying subscribers. Accounts, payments and a public site are then in scope.
+- The product shows, for a league and game week, every match with every market's prediction, probability, confidence and the statistics behind it.
+- A responsible-gambling notice (18+, no bet placement) is part of the platform from the first screen.
+The portfolio case study that earlier versions of this plan mentioned is **out of scope** (decided 2026-10-09); it belongs to a different project.
 
 ## 2. Ground rules (non-negotiable)
 
@@ -202,7 +205,7 @@ Shows edge = `p - fair_implied_probability(odds)` and `EV = p * odds - 1` next t
 
 Python 3.11+, `uv`. `pandas`, `numpy`, `scipy`, `scikit-learn`, `xgboost`, `statsmodels`, `soccerdata`, `requests`, `numba`, `plotly`.
 Production database: **Supabase (Postgres)**. Raw file cache in `data/raw/` locally (object storage such as Cloudflare R2 later if needed). **DuckDB** is for local development and analysis only, never the system of record.
-API: **FastAPI**. UI: Streamlit (fast demo) or Next.js (product feel), decided at design review. Frontend may be hosted on Cloudflare Pages.
+API: **FastAPI**. UI: a **custom web app** hosted on **Cloudflare** (decided 2026-10-09); the framework is chosen at the Phase 5 design review. Cloudflare Workers/Pages serve the app and a thin API over Supabase, so database credentials never reach the browser.
 Scheduled jobs: Python on a scheduled runner (GitHub Actions cron or a small hosted container), not Cloudflare Workers (the simulation and scrapers need Python and heavy compute).
 Tests: `pytest`. Lint: `ruff`.
 
@@ -252,7 +255,7 @@ Improvement cycle: review the track record, pick the weakest family or league, c
 ```
 Match_Outcome/
   CLAUDE.md  BUILD.md
-  docs/        market-catalogue.md  data-audit.md  odds-sources.md  model-card.md  case-study.md
+  docs/        market-catalogue.md  data-audit.md  odds-sources.md  model-card.md
   data/        raw/  processed/  market_aliases.csv  team_aliases.csv  (seed files; local DuckDB only for dev)
   db/          migrations/  (Postgres schema for Supabase)
   scripts/     audit scripts, one-off tools
@@ -293,7 +296,7 @@ Ship in layers, because data quality drops sharply from goals to players.
 
 **Phase 6: Player markets (experimental).** Lineups, per-player rates, family I. Ship behind an "experimental" label unless calibration supports more.
 
-**Phase 7: Odds comparison and portfolio write-up.** Section 11 add-on, then `docs/case-study.md`: problem, users, scope decisions (why goals first, why players last), data audit findings, honest results, what failed, next steps.
+**Phase 7: Odds comparison.** Section 11 add-on (the portfolio write-up is out of scope).
 
 ## 14. gstack workflow
 
@@ -310,6 +313,6 @@ Decided: leagues for v1 are the Big 5 (Premier League, La Liga, Bundesliga, Seri
 
 1. Which other betting sites should we read market lists from?
 2. Is v1 limited to families A to H (no players), as proposed?
-3. ~~Streamlit or custom web UI?~~ Decided 2026-10-08: a **custom web app** (more product-like). Framework and hosting to be chosen at the Phase 5 design review.
-4. Publish publicly, or portfolio case study only?
+3. ~~Streamlit or custom web UI?~~ Decided: a **custom web app on Cloudflare** (2026-10-08 and 2026-10-09). Framework chosen at the Phase 5 design review.
+4. ~~Publish publicly, or portfolio case study only?~~ Decided 2026-10-09: **private for HEO first**, then a **subscription product**; the portfolio case study is out of scope.
 5. Is odds comparison wanted in v1 at all, or after the predictions are proven?

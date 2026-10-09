@@ -8,3 +8,7 @@ __pycache__/
 .claude/settings.local.json
 downloaded_files/
 data/processed/*.log
+
+# generated prototype data and design-review screenshots
+web/prototype/data/
+.impeccable/review/
