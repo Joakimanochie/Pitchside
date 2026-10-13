@@ -43,16 +43,33 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      # Refresh the private web board: export the latest stored predictions and publish them to Cloudflare.
-      # Skipped (not failed) until the CLOUDFLARE_API_TOKEN secret exists. The site sits behind Cloudflare Access.
-      - name: Export the web snapshot
+      # Refresh the private web app: export the latest stored predictions as data files, build the site from them, publish to Cloudflare.
+      # The export always runs; the build and deploy are skipped (not failed) until the CLOUDFLARE_API_TOKEN secret exists.
+      # The site sits behind Cloudflare Access. The web app holds no database credentials: it only ships these files.
+      - name: Export the web app data
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: uv run --frozen --no-dev python scripts/export_prototype_data.py
+        run: uv run --frozen --no-dev python scripts/export_app_data.py
 
-      - name: Deploy the web board to Cloudflare
+      - uses: actions/setup-node@v4
         if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
-        working-directory: web
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/app/package-lock.json
+
+      - name: Build the web app
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
+        working-directory: web/app
+        run: |
+          npm ci
+          npm run check
+          npm test
+          npm run build
+
+      - name: Deploy the web app to Cloudflare
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
+        working-directory: web/app
         env:
           CLOUDFLARE_ACCOUNT_ID: 732527cd8d00cefae7077399663914e8
-        run: npx --yes wrangler@4 deploy
+        run: npx wrangler deploy

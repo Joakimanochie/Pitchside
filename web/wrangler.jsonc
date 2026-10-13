@@ -1,6 +1,0 @@
-{
-  "name": "pitchside",
-  "compatibility_date": "2026-10-01",
-  "assets": { "directory": "./prototype" },
-  "workers_dev": true, "preview_urls": false
-}

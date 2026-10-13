@@ -53,3 +53,16 @@ the database refuses to update or delete them.
 - **Unmapped club name** (the run stops and lists the names): add the spellings to `data/team_aliases.csv`, commit, re-run.
 - **"only N finished matches in the database"**: the league has not been backfilled. Run `scripts/load_history.py <LEAGUE>`.
 - **ESPN or football-data unavailable**: that league's step fails without writing partial data; the other leagues still run, the job ends red, and the next day's run catches up.
+
+## The web app
+
+`web/app` is a SvelteKit site deployed as a Cloudflare Worker named `pitchside`, protected by Cloudflare Access (one allowed email). It holds no database credentials.
+Each daily run, after the predictions are stored and settled, the pipeline:
+
+1. runs `scripts/export_app_data.py` (SELECT only), writing `web/app/static/data/index.json` and one `match/<id>.json` per upcoming match (not committed);
+2. builds the site (`npm ci`, `npm run check`, `npm test`, `npm run build`), which prerenders every page from those files;
+3. deploys it with `wrangler deploy`. Steps 2 and 3 are skipped until the `CLOUDFLARE_API_TOKEN` secret exists.
+
+By hand, from the repo root: `uv run python scripts/export_app_data.py`, then in `web/app`: `npm run build` and `npx wrangler deploy` (the Cloudflare login for the Pitchside account
+is kept in a separate config folder: `XDG_CONFIG_HOME=C:/Users/HP/.pitchside-cf`). Stop the dev server first on Windows or the build cannot clean its output folder.
+Local preview: `npm run dev` in `web/app`.

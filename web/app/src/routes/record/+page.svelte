@@ -1,0 +1,175 @@
+<script lang="ts">
+	import CalibrationChart from '#lib/components/CalibrationChart.svelte';
+	import { pct0, pct1 } from '#lib/labels.js';
+	import { reveal } from '#lib/reveal.js';
+	import { shortDate } from '#lib/time.svelte.js';
+	import type { PageProps } from './$types';
+
+	let { data }: PageProps = $props();
+	const d = $derived(data.index);
+	const L = $derived(d.live);
+	const v = $derived(d.validation);
+	const C = $derived(d.confidence.validation);
+	const stored = $derived(d.fixtures.length * 945);
+	const first = $derived(L.matches[0]);
+	const last = $derived(L.matches[L.matches.length - 1]);
+	const NAMES: Record<string, string> = { home: 'Home win', draw: 'Draw', away: 'Away win', BUNDESLIGA: 'Bundesliga', EPL: 'Premier League', LALIGA: 'La Liga', LIGUE1: 'Ligue 1', SERIEA: 'Serie A' };
+	const FAMILIES: Record<string, string> = { B: 'Halves', C: 'Game flow', D: 'Minutes', E: 'Combinations' };
+	const marketRows = $derived<[string, { n: number; predicted: number | null; actual: number | null }][]>([
+		['Home win', L.home], ['Draw', L.draw], ['Away win', L.away], ['Both teams to score', L.btts_yes], ['Over 2.5 goals', L.over25]
+	]);
+	const notes = $derived.by(() => {
+		const out: string[] = [];
+		const o = L.over25, h = L.home;
+		if (o.actual! - o.predicted! > 0.08) out.push('Goals ran well above what the model expected.');
+		if (o.predicted! - o.actual! > 0.08) out.push('Goals ran well below what the model expected.');
+		if (h.actual! - h.predicted! > 0.08) out.push('Home teams won more often than predicted.');
+		if (h.predicted! - h.actual! > 0.08) out.push('Home teams won less often than predicted.');
+		return out;
+	});
+	const liveCalibration = $derived(L.calibration.map((c) => ({ ...c, to: c.from + 0.1 })));
+</script>
+
+<svelte:head><title>Track record · Pitchside</title></svelte:head>
+
+<div class="wrap record">
+	<div>
+		<h1 class="display">The record, kept honestly</h1>
+		<p class="lede" style="margin-top:1rem">
+			Every prediction is stored before kickoff and scored after the match, and the stored predictions cannot be edited. Below: how it has done on real matches so far, then how the model did in tests on matches it had never seen.
+		</p>
+		<p class="status-line"><b>{L.n}</b> matches played and scored so far. <b>{stored.toLocaleString()}</b> predictions are stored for {d.fixtures.length} upcoming matches.</p>
+	</div>
+
+	<section use:reveal>
+		<h2 class="h2">The live record so far</h2>
+		<p class="muted">
+			{L.n} real matches between {shortDate(first.date)} and {shortDate(last.date)}, scored against the predictions stored before kickoff. {L.n} matches is a small sample: a few results either way can move every number below, so read this as a first look, not a verdict.
+		</p>
+		<div class="panel" style="margin-top:1.25rem">
+			<p class="status-line" style="margin:0 0 1rem">
+				<b>{L.pick_hits} of {L.n}</b> match results picked correctly ({pct0(L.pick_hits / L.n)}). On the match result the model scored <b>{L.log_loss.toFixed(3)}</b> against {L.log_loss_base.toFixed(3)} for simply using how often each outcome usually happens (lower is better).
+			</p>
+			<div class="tbl-wrap">
+				<table>
+					<thead><tr><th scope="col">Market</th><th scope="col">Predicted on average</th><th scope="col">What happened</th></tr></thead>
+					<tbody>{#each marketRows as [t, r] (t)}<tr><td>{t}</td><td>{pct1(r.predicted!)}</td><td>{pct1(r.actual!)}</td></tr>{/each}</tbody>
+				</table>
+			</div>
+			{#if notes.length}
+				<p class="muted" style="margin-top:1rem">{notes.join(' ')} The model has a known tendency to expect too few goals; this many matches is too few to say whether that is luck or that flaw.</p>
+			{/if}
+		</div>
+		<div class="panel" style="margin-top:1rem">
+			<details class="data">
+				<summary>Every match scored ({L.n})</summary>
+				<div class="tbl-wrap">
+					<table>
+						<thead><tr><th scope="col">Date</th><th scope="col">League</th><th scope="col">Match</th><th scope="col">Score</th><th scope="col">Home / draw / away</th><th scope="col">Model’s pick</th><th scope="col"><span class="sr-only">Result</span></th></tr></thead>
+						<tbody>
+							{#each L.matches as m (m.date + m.home)}
+								<tr><td>{shortDate(m.date)}</td><td>{NAMES[m.league] ?? m.league}</td><td>{m.home} v {m.away}</td><td>{m.score[0]}–{m.score[1]}</td>
+									<td>{pct0(m.p.home)} / {pct0(m.p.draw)} / {pct0(m.p.away)}</td><td>{NAMES[m.pick]}</td><td><strong>{m.hit ? 'Right' : 'Missed'}</strong></td></tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			</details>
+		</div>
+		<div class="panel" style="margin-top:1rem">
+			<details class="data">
+				<summary>All {L.selections.toLocaleString()} scored predictions, grouped by probability</summary>
+				<div class="chart-wrap" style="margin-top:1rem">
+					<CalibrationChart points={liveCalibration} />
+					<div class="tbl-wrap">
+						<table>
+							<thead><tr><th scope="col">Predicted range</th><th scope="col">Average predicted</th><th scope="col">Actually happened</th><th scope="col">Predictions</th></tr></thead>
+							<tbody>{#each liveCalibration as p (p.from)}<tr><td>{Math.round(p.from * 100)}–{Math.round(Math.min(p.to, 1) * 100)}%</td><td>{pct1(p.predicted)}</td><td>{pct1(p.actual)}</td><td>{p.n.toLocaleString()}</td></tr>{/each}</tbody>
+						</table>
+					</div>
+					<p class="muted">Predictions from the same match move together, so this is closer to {L.n} independent results than {L.selections.toLocaleString()}.</p>
+				</div>
+			</details>
+		</div>
+		{#if L.waiting_minutes}
+			<p class="muted" style="margin-top:1rem">{L.waiting_minutes.toLocaleString()} more predictions (first goal, goal times and similar) are waiting for verified goal minutes and are not counted yet.</p>
+		{/if}
+	</section>
+
+	{#if C}
+		<section use:reveal>
+			<h2 class="h2">Does the confidence rating mean anything?</h2>
+			<p class="muted">
+				Each prediction is rated High, Medium or Low from how the model did on past predictions of the same kind. The ratings were built from {C.fitted_on_matches} matches, then checked on the next {C.checked_on_matches} matches (played after {C.until}) that were not used to build them. A rating is only worth showing if higher ratings really did better.
+			</p>
+			<div class="panel" style="margin-top:1.25rem">
+				<div class="tbl-wrap">
+					<table>
+						<thead><tr><th scope="col">Rating</th><th scope="col">Share of predictions</th><th scope="col">Model said</th><th scope="col">Actually happened</th><th scope="col">Better than the plain average by</th></tr></thead>
+						<tbody>{#each C.tiers as t (t.tier)}<tr><td>{t.tier}</td><td>{pct0(t.share)}</td><td>{pct1(t.predicted)}</td><td>{pct1(t.happened)}</td><td><strong>{pct1(t.skill)}</strong></td></tr>{/each}</tbody>
+					</table>
+				</div>
+			</div>
+		</section>
+	{/if}
+
+	<section use:reveal>
+		<h2 class="h2">When it says 70%, does it happen 70% of the time?</h2>
+		<p class="muted">
+			A held-out test: 500 real matches from the 2025/26 and 2026/27 seasons, scored on about 330,000 predictions. Each point is a group of predictions with a similar probability. Points on the dashed line mean the model’s numbers match reality. This is a test, not the live record.
+		</p>
+		<div class="panel chart-wrap" style="margin-top:1.25rem">
+			<CalibrationChart points={v.calibration} />
+			<div class="legend"><span><i></i>What actually happened</span><span><i class="dash"></i>Perfect match with the predictions</span></div>
+			<details class="data">
+				<summary>Show the numbers</summary>
+				<div class="tbl-wrap">
+					<table>
+						<thead><tr><th scope="col">Predicted range</th><th scope="col">Average predicted</th><th scope="col">Actually happened</th><th scope="col">Predictions</th></tr></thead>
+						<tbody>{#each v.calibration as p (p.from)}<tr><td>{Math.round(p.from * 100)}–{Math.round(Math.min(p.to, 1) * 100)}%</td><td>{pct1(p.predicted)}</td><td>{pct1(p.actual)}</td><td>{p.n.toLocaleString()}</td></tr>{/each}</tbody>
+					</table>
+				</div>
+			</details>
+		</div>
+	</section>
+
+	<section use:reveal>
+		<h2 class="h2">Does it add anything beyond a plain average?</h2>
+		<p class="muted">Compared with simply guessing how often each outcome usually happens. A higher share removed means the model carries real information. Lower log loss is better.</p>
+		<div class="panel" style="margin-top:1.25rem">
+			<div class="tbl-wrap">
+				<table>
+					<thead><tr><th scope="col">Group of markets</th><th scope="col">Predictions tested</th><th scope="col">Model log loss</th><th scope="col">Plain-average log loss</th><th scope="col">Share removed</th></tr></thead>
+					<tbody>{#each v.families as f (f.family)}<tr><td>{FAMILIES[f.family]}</td><td>{f.selections.toLocaleString()}</td><td>{f.model.toFixed(4)}</td><td>{f.base.toFixed(4)}</td><td><strong>{f.skill >= 0 ? '+' : ''}{(f.skill * 100).toFixed(1)}%</strong></td></tr>{/each}</tbody>
+				</table>
+			</div>
+		</div>
+	</section>
+
+	<section use:reveal>
+		<h2 class="h2">Against the bookmakers on the match result</h2>
+		<p class="muted">The model beats a league average in every league, but the bookmakers’ closing odds still predict the result better. That is expected: they use lineups and team news, and this model does not.</p>
+		<div class="panel" style="margin-top:1.25rem">
+			<div class="tbl-wrap">
+				<table>
+					<thead><tr><th scope="col">League</th><th scope="col">Matches</th><th scope="col">Model</th><th scope="col">League average</th><th scope="col">Bookmakers</th><th scope="col">Right result: model</th><th scope="col">Right result: bookmakers</th></tr></thead>
+					<tbody>{#each v.leagues as r (r.id)}<tr><td>{r.name}</td><td>{r.matches.toLocaleString()}</td><td>{r.model.toFixed(3)}</td><td>{r.base.toFixed(3)}</td><td>{r.book.toFixed(3)}</td><td>{(r.right_model * 100).toFixed(1)}%</td><td>{(r.right_book * 100).toFixed(1)}%</td></tr>{/each}</tbody>
+				</table>
+			</div>
+		</div>
+	</section>
+
+	<section use:reveal>
+		<h2 class="h2">What it does not know</h2>
+		<ul class="list" style="margin-top:1rem">
+			<li><strong>Lineups, injuries and suspensions.</strong> Not used yet.</li>
+			<li><strong>How stable a probability is.</strong> The confidence ratings do not yet include how much a number would move if the model were refitted.</li>
+			<li><strong>A long live record.</strong> Only {L.n} matches have been scored so far, which is too few to judge the model. The tests further down are not live results.</li>
+			<li><strong>Markets beyond goals.</strong> Corners, cards, shots and players are not built yet.</li>
+		</ul>
+	</section>
+</div>
+
+<style>
+	.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>

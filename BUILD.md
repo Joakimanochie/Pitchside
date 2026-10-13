@@ -15,10 +15,12 @@ Builder: HEO. Executor: Claude Code. Read `CLAUDE.md` first for the gstack setup
 - Since 2026-10-09: private prototype board live on Cloudflare behind Access, refreshed by the daily pipeline; first live settlement checked (47 matches, shown on the track-record screen); model 0.3.0 (recent scoring level, total-goals compression); recent form and head-to-head tested and not adopted (`docs/goals-model-report.md`).
 - Confidence tiers (2026-10-13): High / Medium / Low per prediction, built from a 1,400-match held-out backtest of every market and checked on matches the rules never saw (`docs/model-card.md`, `data/confidence_rules.json`). Shown on the board and the track-record screen.
 
+- Production web app (2026-10-13): SvelteKit app live (private, behind Cloudflare Access) with fixtures, the match board, a deep-dive (scorelines, recent results, head to head) and the track record, rebuilt and redeployed by the daily pipeline.
+
 **Order from here (agreed with HEO on 2026-10-08)**
 1. ~~**Phase 2**: goal timing, the match simulator, and families B to E.~~ Done.
 2. ~~**Confidence tiers** (the backtest part of Phase 4).~~ Done. Rebuild with `scripts/backtest_tiers.py` then `scripts/build_tiers.py` when the model version changes.
-3. **Phase 5**: the product screens (fixtures, match board, deep-dive, track record).
+3. **Phase 5**: the product screens (fixtures, match board, deep-dive, track record). Built; remaining: a real QA and design review pass, then accounts and subscriptions.
 4. Along the way: **check the first live settlement** (after the 9 to 12 Oct matches) and fix anything it exposes. Then **improve the model** (xG signal, a prior for newly promoted teams, the over/under fix) using backtest and live evidence together.
 5. Later, not blocking the above: Phase 3 (corners, cards, shots), Phase 6 (players), Phase 7 (odds comparison).
 
@@ -208,7 +210,7 @@ Shows edge = `p - fair_implied_probability(odds)` and `EV = p * odds - 1` next t
 
 Python 3.11+, `uv`. `pandas`, `numpy`, `scipy`, `scikit-learn`, `xgboost`, `statsmodels`, `soccerdata`, `requests`, `numba`, `plotly`.
 Production database: **Supabase (Postgres)**. Raw file cache in `data/raw/` locally (object storage such as Cloudflare R2 later if needed). **DuckDB** is for local development and analysis only, never the system of record.
-API: **FastAPI**. UI: a **custom web app** hosted on **Cloudflare** (decided 2026-10-09); the framework is chosen at the Phase 5 design review. Cloudflare Workers/Pages serve the app and a thin API over Supabase, so database credentials never reach the browser.
+Web app: **SvelteKit (TypeScript)** on **Cloudflare Workers**, in `web/app` (decided 2026-10-13). There is no separate API server and the web tier holds no database credentials: the daily pipeline exports the stored predictions as static JSON files (`scripts/export_app_data.py`: one index plus one file per upcoming match) and the build ships them with the app, so every page is a static read. FastAPI is dropped; all Python work (model, simulation, settling) stays in the pipeline. Cloudflare Access keeps the site private for now; accounts and subscriptions (Supabase Auth plus a subscriptions table) replace it at the subscription step. Payments need a provider that serves Nigeria (Paystack or Flutterwave; Stripe does not).
 Scheduled jobs: Python on a scheduled runner (GitHub Actions cron or a small hosted container), not Cloudflare Workers (the simulation and scrapers need Python and heavy compute).
 Tests: `pytest`. Lint: `ruff`.
 
@@ -295,7 +297,7 @@ Ship in layers, because data quality drops sharply from goals to players.
 
 **Phase 4: Confidence and track record.** Settlement extended to all scorable families, tiers from backtests, the improvement views in section 12a. *Done when the model card documents the tier thresholds and per-family accuracy.*
 
-**Phase 5: Product.** FastAPI plus fixtures, match board, deep-dive, track record. Run `/qa` and `/design-review`. *Done when a stranger can open the match board and understand it unaided.*
+**Phase 5: Product.** SvelteKit app (no separate API) with fixtures, match board, deep-dive, track record. Run `/qa` and `/design-review`. *Done when a stranger can open the match board and understand it unaided.*
 
 **Phase 6: Player markets (experimental).** Lineups, per-player rates, family I. Ship behind an "experimental" label unless calibration supports more.
 
