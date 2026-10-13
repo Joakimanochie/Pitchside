@@ -14,7 +14,7 @@
   const motionOK = !reduceMotion && 'IntersectionObserver' in window;
   if (motionOK) document.documentElement.classList.add('js-motion');
 
-  const state = { data: null, league: 'ALL', tab: 'main', query: '', lines: {}, expanded: new Set() };
+  const state = { data: null, league: 'ALL', tab: 'main', query: '', lines: {}, expanded: new Set(), highOnly: false };
   const main = document.getElementById('main');
   main.removeAttribute('aria-live');
 
@@ -249,12 +249,14 @@
     const drawMarkets = () => {
       const q = state.query;
       const rows = markets.filter(([mid]) => q ? matchesQuery(marketTitle(d.markets[mid].name, ctx), q) : tabOf(mid) === state.tab);
-      grid.replaceChildren(...rows.map(([mid, lines], i) => marketCard(f, mid, lines, ctx, i)));
-      status.textContent = q ? `${rows.length} market${rows.length === 1 ? '' : 's'} match “${state.query}”` : '';
-      if (!rows.length) grid.append(h('p', { class: 'empty' }, q ? 'No market matches that search.' : 'Nothing in this group.'));
+      const cards = rows.map(([mid, lines], i) => marketCard(f, mid, lines, ctx, i)).filter(Boolean);
+      grid.replaceChildren(...cards);
+      status.textContent = q ? `${cards.length} market${cards.length === 1 ? '' : 's'} match “${state.query}”` : '';
+      if (!cards.length) grid.append(h('p', { class: 'empty' }, q ? 'No market matches that search.' : state.highOnly ? 'Nothing here is rated High confidence.' : 'Nothing in this group.'));
       observeReveals();
     };
-    const hp = (label, p) => h('div', { class: 'hp' }, h('span', { class: 'who' }, label), h('span', { class: 'big' }, pct0(p)), h('span', { class: 'mini', 'aria-hidden': 'true' }, h('i', { style: `width:${(p * 100).toFixed(1)}%` })));
+    const x12 = Object.fromEntries((((d.preds[f.id] || {})['1x2'] || {}).null || []).map((r) => [r[0], r[3]]));
+    const hp = (label, p, key) => h('div', { class: 'hp' }, h('span', { class: 'who' }, label, key in x12 ? confBars(x12[key]) : null), h('span', { class: 'big' }, pct0(p)), h('span', { class: 'mini', 'aria-hidden': 'true' }, h('i', { style: `width:${(p * 100).toFixed(1)}%` })));
     const dd = (k, v) => [h('dt', {}, k), h('dd', {}, v)];
 
     main.append(h('div', { class: 'wrap wide' },
@@ -265,7 +267,7 @@
           h('span', {}, kickoffDate(f.kickoff).toLocaleString(undefined, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', hour12: false })),
           h('span', {}, `Time zone: ${tzLabel()}`))),
       h('section', { class: 'reveal', 'aria-label': 'Match result probabilities' },
-        h('div', { class: 'headline-card' }, hp(`${f.home} win`, f.p.home), hp('Draw', f.p.draw), hp(`${f.away} win`, f.p.away)),
+        h('div', { class: 'headline-card' }, hp(`${f.home} win`, f.p.home, 'home'), hp('Draw', f.p.draw, 'draw'), hp(`${f.away} win`, f.p.away, 'away')),
         h('dl', { class: 'why' },
           dd('Expected goals', `${f.home} ${Number(c.lambda_home).toFixed(2)} · ${f.away} ${Number(c.lambda_away).toFixed(2)}`),
           dd('History used', `${Number(c.matches_used).toLocaleString()} finished ${d.leagues[f.league]} matches`),
@@ -275,8 +277,10 @@
           h('p', { class: 'span' }, 'Lineups, injuries and suspensions are not used yet. The model knows past scores, how goals split between the halves, and when in a match goals tend to happen.'))),
       h('div', { class: 'notice', style: 'margin-top:1rem' }, icon('info'), h('p', {}, h('strong', {}, '18+. '), 'These are statistical estimates, not advice or a promise of any result. Fair odds are simply 1 divided by the probability; they are not bookmaker prices.')),
       h('div', { class: 'toolbar' },
-        h('div', { class: 'conf-note' }, h('span', { class: 'chip', title: 'Confidence tiers need a calibration study first. Until then no tier is shown.' }, icon('info', 14), 'Confidence: not rated yet'),
+        h('div', { class: 'conf-note' },
+          h('button', { class: 'pill sm', 'aria-pressed': String(state.highOnly), onclick: (e) => { state.highOnly = !state.highOnly; e.currentTarget.setAttribute('aria-pressed', String(state.highOnly)); drawMarkets(); } }, 'High confidence only'),
           h('span', { class: 'muted small' }, 'A “Pick” is the most likely outcome of a market where only one outcome can happen.')),
+        confidenceLegend(d.confidence),
         tabsEl,
         h('div', { class: 'search' }, icon('search'), search),
         status),
@@ -284,12 +288,18 @@
     drawTabs();
     drawMarkets();
   }
+  const TIER_NAMES = ['High', 'Medium', 'Low'];
+  const confBars = (tier) => h('span', { class: `conf conf-${tier}`, role: 'img', 'aria-label': `${TIER_NAMES[tier]} confidence`, title: `${TIER_NAMES[tier]} confidence in this number` },
+    h('i'), h('i'), h('i'));
   function marketCard(f, mid, linesMap, ctx, index) {
     const d = state.data, meta = d.markets[mid];
     const key = `${f.id}:${mid}`;
-    const lineKeys = Object.keys(linesMap).sort((a, b) => (a === 'null' ? -1 : b === 'null' ? 1 : Number(a) - Number(b)));
-    const current = state.lines[key] && linesMap[state.lines[key]] ? state.lines[key] : defaultLine(linesMap);
-    let rows = linesMap[current].slice();
+    let lineKeys = Object.keys(linesMap).sort((a, b) => (a === 'null' ? -1 : b === 'null' ? 1 : Number(a) - Number(b)));
+    if (state.highOnly) lineKeys = lineKeys.filter((lk) => linesMap[lk].some((r) => r[3] === 0));
+    if (!lineKeys.length) return null;
+    const shown = Object.fromEntries(lineKeys.map((lk) => [lk, linesMap[lk]]));
+    const current = state.lines[key] && shown[state.lines[key]] ? state.lines[key] : defaultLine(shown);
+    let rows = linesMap[current].filter((r) => !state.highOnly || r[3] === 0);
     if (SORT_BY_PROBABILITY.has(mid)) rows.sort((a, b) => b[1] - a[1]);
     const total = rows.length, open = state.expanded.has(key);
     if (total > COLLAPSED_ROWS + 2 && !open) rows = rows.slice(0, COLLAPSED_ROWS);
@@ -299,10 +309,10 @@
         h('button', { class: 'pill sm', 'aria-pressed': String(lk === current), onclick: () => { state.lines[key] = lk; card.replaceWith(marketCard(f, mid, linesMap, ctx, 0)); } }, lineChipLabel(mid, lk)))),
       current !== 'null' && Number.isInteger(Number(current)) && /^(ou_|asian_handicap)/.test(mid) &&
         h('p', { class: 'refund' }, 'On a whole-number line, the stake is returned if the result lands exactly on it. Probabilities here exclude that case.'),
-      h('ul', { class: 'sels' }, rows.map(([sel, p, pick]) =>
+      h('ul', { class: 'sels' }, rows.map(([sel, p, pick, tier]) =>
         h('li', { class: `sel${pick ? ' is-pick' : ''}` },
           h('div', { class: 'sel-top' },
-            h('span', { class: 'sel-name' }, selectionLabel(mid, current, sel, ctx), pick ? h('span', { class: 'pick-tag' }, 'Pick') : null),
+            h('span', { class: 'sel-name' }, selectionLabel(mid, current, sel, ctx), pick ? h('span', { class: 'pick-tag' }, 'Pick') : null, confBars(tier)),
             h('span', { class: 'sel-p' }, pct1(p)), h('span', { class: 'sel-fair', title: 'Fair odds: 1 divided by the probability' }, fair(p))),
           h('div', { class: 'sel-bar', 'aria-hidden': 'true' }, h('i', { style: `width:${(p * 100).toFixed(1)}%` }))))),
       total > COLLAPSED_ROWS + 2 && h('div', { class: 'more' }, h('button', { onclick: () => { open ? state.expanded.delete(key) : state.expanded.add(key); card.replaceWith(marketCard(f, mid, linesMap, ctx, 0)); } },
@@ -325,6 +335,8 @@
 
       liveSection(d.live),
 
+      confidenceSection(d.confidence),
+
       h('section', { class: 'reveal' }, h('h2', { class: 'h2' }, 'When it says 70%, does it happen 70% of the time?'),
         h('p', { class: 'muted' }, 'A held-out test: 500 real matches from the 2025/26 and 2026/27 seasons, scored on about 330,000 predictions. Each point is a group of predictions with a similar probability. Points on the dashed line mean the model’s numbers match reality. This is a test, not the live record.'),
         h('div', { class: 'panel chart-wrap', style: 'margin-top:1.25rem' }, calibrationChart(v.calibration),
@@ -342,7 +354,7 @@
       h('section', { class: 'reveal' }, h('h2', { class: 'h2' }, 'What it does not know'),
         h('ul', { class: 'list', style: 'margin-top:1rem' },
           h('li', {}, h('strong', {}, 'Lineups, injuries and suspensions.'), ' Not used yet.'),
-          h('li', {}, h('strong', {}, 'Confidence ratings.'), ' They need a calibration study of their own before any rating is shown.'),
+          h('li', {}, h('strong', {}, 'How stable a probability is.'), ' The confidence ratings do not yet include how much a number would move if the model were refitted.'),
           h('li', {}, h('strong', {}, 'A long live record.'), ` Only ${d.live.n} matches have been scored so far, which is too few to judge the model. The tests further down are not live results.`),
           h('li', {}, h('strong', {}, 'Markets beyond goals.'), ' Corners, cards, shots and players are not built yet.')))));
     countUp(storedEl);
@@ -373,6 +385,22 @@
   function calibrationTable(points) {
     return table(['Predicted range', 'Average predicted', 'Actually happened', 'Predictions'],
       points.map((p) => [`${Math.round(p.from * 100)}–${Math.round(Math.min(p.to, 1) * 100)}%`, pct1(p.predicted), pct1(p.actual), p.n.toLocaleString()]));
+  }
+  function confidenceLegend(C) {
+    const v = C && C.validation;
+    return h('details', { class: 'conf-legend' },
+      h('summary', {}, confBars(0), ' What do the confidence bars mean?'),
+      h('div', { class: 'conf-body' },
+        h('p', {}, 'The bars rate how far this probability can be trusted, not how likely the outcome is. A High rating means that when the model gave predictions like this one (same market, similar probability), it was reliably better than simply using how often that outcome usually happens, and its numbers matched reality. Predictions close to the usual rate, or from markets where the model adds little, are rated Low.'),
+        v ? h('p', { class: 'muted' }, `Checked on ${v.checked_on_matches} matches the ratings were not built from: High predictions beat the plain average by ${(v.tiers[0].skill * 100).toFixed(1)}%, Medium by ${(v.tiers[1].skill * 100).toFixed(1)}%, Low by ${(v.tiers[2].skill * 100).toFixed(1)}%. Not yet included: how much a probability would move if the model were refitted.`) : null));
+  }
+  function confidenceSection(C) {
+    const v = C && C.validation;
+    if (!v) return null;
+    return h('section', { class: 'reveal' }, h('h2', { class: 'h2' }, 'Does the confidence rating mean anything?'),
+      h('p', { class: 'muted' }, `Each prediction is rated High, Medium or Low from how the model did on past predictions of the same kind. The ratings were built from ${v.fitted_on_matches} matches, then checked on the next ${v.checked_on_matches} matches (played after ${v.until}) that were not used to build them. A rating is only worth showing if higher ratings really did better.`),
+      h('div', { class: 'panel', style: 'margin-top:1.25rem' }, h('div', { class: 'tbl-wrap' }, table(['Rating', 'Share of predictions', 'Model said', 'Actually happened', 'Better than the plain average by'],
+        v.tiers.map((t) => [t.tier, pct0(t.share), pct1(t.predicted), pct1(t.happened), h('strong', {}, `${(t.skill * 100).toFixed(1)}%`)])))));
   }
   function liveSection(L) {
     const names = { home: 'Home win', draw: 'Draw', away: 'Away win', BUNDESLIGA: 'Bundesliga', EPL: 'Premier League', LALIGA: 'La Liga', LIGUE1: 'Ligue 1', SERIEA: 'Serie A' };

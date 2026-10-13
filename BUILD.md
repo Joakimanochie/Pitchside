@@ -3,7 +3,7 @@
 Working title: **Pitchside** (rename freely).
 Builder: HEO. Executor: Claude Code. Read `CLAUDE.md` first for the gstack setup.
 
-## Status and order of work (updated 2026-10-08)
+## Status and order of work (updated 2026-10-13)
 
 **Done and running**
 - Phase 0 data audit (`docs/data-audit.md`).
@@ -12,9 +12,12 @@ Builder: HEO. Executor: Claude Code. Read `CLAUDE.md` first for the gstack setup
 
 - Phase 2 (2026-10-08): goal minutes verified and loaded for 2023 to 2026, the match simulator, and families B to E (142 markets). Held-out validation shows well-calibrated probabilities and some skill over the base rate in every family (`docs/goals-model-report.md`). Coverage is listed in `docs/market-coverage.md`.
 
+- Since 2026-10-09: private prototype board live on Cloudflare behind Access, refreshed by the daily pipeline; first live settlement checked (47 matches, shown on the track-record screen); model 0.3.0 (recent scoring level, total-goals compression); recent form and head-to-head tested and not adopted (`docs/goals-model-report.md`).
+- Confidence tiers (2026-10-13): High / Medium / Low per prediction, built from a 1,400-match held-out backtest of every market and checked on matches the rules never saw (`docs/model-card.md`, `data/confidence_rules.json`). Shown on the board and the track-record screen.
+
 **Order from here (agreed with HEO on 2026-10-08)**
 1. ~~**Phase 2**: goal timing, the match simulator, and families B to E.~~ Done.
-2. **Confidence tiers** (the backtest part of Phase 4), so every prediction can carry a tier.
+2. ~~**Confidence tiers** (the backtest part of Phase 4).~~ Done. Rebuild with `scripts/backtest_tiers.py` then `scripts/build_tiers.py` when the model version changes.
 3. **Phase 5**: the product screens (fixtures, match board, deep-dive, track record).
 4. Along the way: **check the first live settlement** (after the 9 to 12 Oct matches) and fix anything it exposes. Then **improve the model** (xG signal, a prior for newly promoted teams, the over/under fix) using backtest and live evidence together.
 5. Later, not blocking the above: Phase 3 (corners, cards, shots), Phase 6 (players), Phase 7 (odds comparison).

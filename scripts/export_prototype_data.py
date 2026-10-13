@@ -16,6 +16,7 @@ from pathlib import Path
 
 import psycopg
 
+from pitchside.confidence import TIERS, load_rules, tier_for
 from pitchside.db.migrate import _load_env
 from pitchside.leagues import LEAGUES
 from pitchside.markets.registry import MARKETS
@@ -114,6 +115,7 @@ def live_record(conn: psycopg.Connection, version: str) -> dict:
 def main() -> None:
     _load_env()
     order = {mid: i for i, mid in enumerate(MARKETS)}
+    rules = load_rules()
     with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
         version = conn.execute("SELECT model_version_id FROM prediction_runs WHERE run_type = 'weekly' ORDER BY created_at DESC LIMIT 1").fetchone()[0]
         matches = conn.execute(
@@ -130,7 +132,8 @@ def main() -> None:
                 "SELECT p.match_id, p.market_id, p.line, p.selection, p.probability, p.is_pick FROM predictions p "
                 "JOIN prediction_runs r ON r.id = p.run_id WHERE r.model_version_id = %s AND r.run_type = 'weekly' "
                 "AND p.match_id = ANY(%s) ORDER BY p.id", (version, ids)):
-            preds[mid][market_id]["null" if line is None else str(float(line))].append([sel, round(float(prob), 4), 1 if pick else 0])
+            tier = TIERS.index(tier_for(rules, market_id, MARKETS[market_id].family, float(prob))) if market_id in MARKETS else 2
+            preds[mid][market_id]["null" if line is None else str(float(line))].append([sel, round(float(prob), 4), 1 if pick else 0, tier])
 
         # the live record belongs to the newest model version that already has scored matches
         scored = conn.execute(
@@ -142,13 +145,14 @@ def main() -> None:
     markets = {mid: {"name": m.name, "family": m.family, "exclusive": m.exclusive, "order": order[mid]} for mid, m in MARKETS.items()}
     fixtures = []
     for mid, league, kickoff, home, away in matches:
-        x12 = {s: p for s, p, _ in preds[mid]["1x2"]["null"]}
+        x12 = {s: p for s, p, *_ in preds[mid]["1x2"]["null"]}
         fixtures.append({"id": mid, "league": league, "kickoff": kickoff.astimezone(UTC).isoformat(), "home": home, "away": away,
                          "p": x12, "ctx": ctx.get(mid, {})})
     snapshot = {
         "generated_at": datetime.now(UTC).isoformat(timespec="seconds"), "model_version": version,
         "leagues": {lid: lg.name for lid, lg in LEAGUES.items()}, "markets": markets, "fixtures": fixtures,
         "preds": {str(mid): preds[mid] for mid in ids}, "validation": validation_cached(), "live": live,
+        "confidence": {"labels": list(TIERS), "validation": rules.get("validation"), "backtest": rules.get("backtest")},
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(snapshot, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")

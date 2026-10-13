@@ -274,3 +274,17 @@ body.on-record .foot p strong { color: var(--on-navy); }
   .sel-top { grid-template-columns: minmax(0, 1fr) auto; }
   .sel-fair { display: none; }
 }
+
+/* ---- confidence bars ------------------------------------------------------------------------------------------------ */
+.conf { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; margin-left: .55rem; vertical-align: -1px; }
+.conf i { display: block; width: 3px; border-radius: 1px; background: var(--line-strong); }
+.conf i:nth-child(1) { height: 5px; } .conf i:nth-child(2) { height: 8px; } .conf i:nth-child(3) { height: 12px; }
+.conf-0 i { background: var(--ink); }
+.conf-1 i:nth-child(-n+2) { background: var(--ink-2); }
+.conf-2 i:nth-child(1) { background: var(--ink-3); }
+.who .conf { margin-left: .5rem; }
+.conf-legend { margin: .9rem 0 0; font-size: .9rem; }
+.conf-legend summary { cursor: pointer; display: inline-flex; align-items: center; color: var(--ink-2); }
+.conf-legend summary .conf { margin: 0 .5rem 0 0; }
+.conf-body { max-width: 62ch; display: grid; gap: .6rem; padding-top: .6rem; color: var(--ink-2); }
+@media (prefers-reduced-motion: no-preference) { .conf i { transition: background-color .15s ease; } }
