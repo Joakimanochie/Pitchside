@@ -118,7 +118,7 @@
 
 <style>
 	.story { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; margin-top: 1.25rem; }
-	.block { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 1.35rem 1.5rem; box-shadow: var(--shadow-card); display: grid; gap: .75rem; align-content: start; min-width: 0; }
+	.block { background: var(--surface); border-radius: var(--radius-lg); padding: 1.35rem 1.5rem; box-shadow: var(--shadow-card); display: grid; gap: .75rem; align-content: start; min-width: 0; }
 	.h3 { font-size: 1.25rem; line-height: 1.25; }
 	.xg { display: grid; gap: .55rem; }
 	.xg-row { display: grid; grid-template-columns: minmax(0, 9rem) 1fr 3rem; align-items: center; gap: .75rem; font-size: .95rem; }

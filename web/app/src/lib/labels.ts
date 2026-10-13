@@ -27,7 +27,8 @@ function comboLine(mid: string): number | null {
 
 function tokenLabel(tok: string, mid: string, ctx: Ctx): string {
 	const { home, away } = ctx;
-	const isBtts = mid.includes('btts');
+	// a plain GG/NG market reads "Both teams score"; "Home or GG" and "in both halves" markets are yes/no questions
+	const isBtts = mid.includes('btts') && !mid.startsWith('or_') && mid !== 'btts_both_halves';
 	const fixed: Record<string, string> = {
 		home, away, draw: 'Draw', none: 'No goal', no_goal: 'No goal', odd: 'Odd', even: 'Even', '1st': '1st half', '2nd': '2nd half', equal: 'Equal',
 		'1x': `${home} or Draw`, x2: `Draw or ${away}`, '12': `${home} or ${away}`, home_goal: `${home} scores first`, away_goal: `${away} scores first`,
@@ -63,6 +64,11 @@ export function selectionLabel(mid: string, lineKey: string, sel: string, ctx: C
 		const [a, b] = sel.split('/');
 		return `1st half: ${a === 'yes' ? 'Yes' : 'No'} · 2nd half: ${b === 'yes' ? 'Yes' : 'No'}`;
 	}
+	if (mid === 'first_goal_x12' && sel.includes('&')) {
+		const [first, result] = sel.split('&');
+		const r = result === 'home' ? `${home} win` : result === 'away' ? `${away} win` : tokenLabel(result, mid, ctx);
+		return `${partLabel(first, mid, ctx)} & ${r}`;
+	}
 	if (sel.includes('&')) return sel.split('&').map((part) => partLabel(part, mid, ctx)).join(' & ');
 	if (mid === 'ht_ft') return partLabel(sel, mid, ctx);
 	if (mid.includes('multigoals') && sel === 'no_goal') return 'No goal';
@@ -78,7 +84,8 @@ export function lineChipLabel(mid: string, lineKey: string): string {
 	return String(n);
 }
 
-export const marketTitle = (name: string, ctx: Ctx) => name.replace(/Home Team/g, ctx.home).replace(/Away Team/g, ctx.away);
+export const marketTitle = (name: string, ctx: Ctx) =>
+	name.replace(/Home Team/g, ctx.home).replace(/Away Team/g, ctx.away).replace(/ minute$/, ' minutes');
 
 // Search: people type "first goal", the market is called "1st Goal"; "btts" is "GG/NG".
 const ALIASES: [RegExp, string][] = [

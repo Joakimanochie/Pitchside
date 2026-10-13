@@ -4,6 +4,7 @@
 	import Story from '#lib/components/Story.svelte';
 	import { TABS, matchesQuery, marketTitle, pct0, pct1, tabOf, type TabId } from '#lib/labels.js';
 	import { kickoffLong, tzLabel } from '#lib/time.svelte.js';
+	import { ui } from '#lib/ui.svelte.js';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -13,7 +14,6 @@
 
 	let tab = $state<TabId>('main');
 	let query = $state('');
-	let highOnly = $state(false);
 
 	const markets = $derived(
 		Object.entries(match.preds)
@@ -65,12 +65,13 @@
 
 	<div class="notice" style="margin-top:1rem">
 		<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5" /><path d="M8 7.2v4" /><circle cx="8" cy="4.8" r=".6" fill="currentColor" /></svg>
-		<p><strong>18+. </strong>These are statistical estimates, not advice or a promise of any result. Fair odds are simply 1 divided by the probability; they are not bookmaker prices.</p>
+		<p><strong>18+.</strong> These are statistical estimates, not advice or a promise of any result. Fair odds are simply 1 divided by the probability; they are not bookmaker prices.</p>
 	</div>
 
+	<h2 class="sr-only">Markets</h2>
 	<div class="toolbar">
 		<div class="conf-note">
-			<button class="pill sm" aria-pressed={highOnly} onclick={() => (highOnly = !highOnly)}>High confidence only</button>
+			<button class="pill sm" aria-pressed={ui.highOnly} onclick={() => (ui.highOnly = !ui.highOnly)}>High confidence only</button>
 			<span class="muted small">A “Pick” is the most likely outcome of a market where only one outcome can happen.</span>
 		</div>
 		<details class="conf-legend">
@@ -102,12 +103,12 @@
 
 	<div class="markets">
 		{#each visible as [mid, lines] (mid)}
-			<MarketCard {mid} meta={index.markets[mid]} {lines} {ctx} {highOnly} />
+			<MarketCard {mid} meta={index.markets[mid]} {lines} {ctx} highOnly={ui.highOnly} />
 		{/each}
 	</div>
 	{#if !visible.length}
 		<p class="empty">{q ? 'No market matches that search.' : 'Nothing in this group.'}</p>
-	{:else if highOnly && !highInView}
+	{:else if ui.highOnly && !highInView}
 		<p class="empty">Nothing here is rated High confidence.</p>
 	{/if}
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultLine, fair, lineChipLabel, matchesQuery, pct1, selectionLabel, sortedLineKeys, tabOf } from './labels';
+import { defaultLine, fair, lineChipLabel, marketTitle, matchesQuery, pct1, selectionLabel, sortedLineKeys, tabOf } from './labels';
 
 const ctx = { home: 'Arsenal', away: 'Leeds United' };
 
@@ -17,6 +17,20 @@ describe('selectionLabel', () => {
 	it('labels half-time / full-time and combination selections', () => {
 		expect(selectionLabel('ht_ft', 'null', 'home/home', ctx)).toBe('HT Arsenal / FT Arsenal');
 		expect(selectionLabel('1x2_ou_25', 'null', 'home&over', ctx)).toContain('Arsenal & Over');
+	});
+});
+
+describe('yes/no questions and combos', () => {
+	it('keeps Yes/No for markets that only mention both teams to score', () => {
+		expect(selectionLabel('or_home_btts', 'null', 'yes', ctx)).toBe('Yes');
+		expect(selectionLabel('btts_both_halves', 'null', 'no', ctx)).toBe('No');
+		expect(selectionLabel('btts', 'null', 'yes', ctx)).toBe('Both teams score');
+	});
+	it('says who won in first goal & 1X2', () => {
+		expect(selectionLabel('first_goal_x12', 'null', 'home_goal&away', ctx)).toBe('Arsenal scores first & Leeds United win');
+	});
+	it('pluralises minute windows', () => {
+		expect(marketTitle('1X2 from 1 to 5 minute', ctx)).toBe('1X2 from 1 to 5 minutes');
 	});
 });
 
