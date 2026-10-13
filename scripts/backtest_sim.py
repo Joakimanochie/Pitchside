@@ -23,9 +23,8 @@ from pitchside.db.migrate import _load_env
 from pitchside.markets.base import HALF_LOST, HALF_WON, LOST, WON
 from pitchside.markets.record_base import price_record
 from pitchside.markets.registry import RECORD_MARKETS
-from pitchside.models.dixon_coles import DixonColes
 from pitchside.models.split_table import HalfSplitTable
-from pitchside.pipeline.weekly import MODEL_PARAMS, load_history
+from pitchside.pipeline.weekly import load_history, make_model
 from pitchside.sim.record import from_many
 from pitchside.sim.simulate import simulate
 from pitchside.sim.timing import GoalTimeProfile
@@ -95,7 +94,7 @@ def main(sample: int, n_sims: int):
     for i, r in enumerate(test.itertuples(index=False)):
         week = r.date - timedelta(days=r.date.weekday())
         if (r.league, week) not in fits:
-            fits[(r.league, week)] = DixonColes(half_life_days=MODEL_PARAMS["half_life_days"], ridge=MODEL_PARAMS["ridge"]).fit(histories[r.league], as_of=week)
+            fits[(r.league, week)] = make_model().fit(histories[r.league], as_of=week)
         scoreline = fits[(r.league, week)].score_matrix(r.home, r.away)
         rec = simulate(scoreline, split, profile, n_sims, np.random.default_rng(int(r.id)))
         lookup = {(row["market_id"], row["line"], row["selection"]): row["probability"] for m in RECORD_MARKETS.values()

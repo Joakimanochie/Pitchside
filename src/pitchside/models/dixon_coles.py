@@ -17,7 +17,7 @@ from datetime import date, timedelta
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
-from scipy.stats import poisson
+from scipy.stats import nbinom, poisson
 
 RHO_BOUND = 0.25
 MAX_GOALS = 10
@@ -74,6 +74,8 @@ class DixonColes:
     max_goals: int = MAX_GOALS
     level_window_days: float = 0.0  # 0 = off; see level_adjustment
     level_shrink: float = 60.0
+    total_compression: float = 1.0  # < 1 pulls each match's expected total goals toward the league's typical total (ratio kept)
+    dispersion: float = 0.0  # 0 = Poisson goals; alpha > 0 gives variance lam + alpha * lam^2 (negative binomial), same mean
     # fitted state
     teams: list[str] = field(default_factory=list)
     mu: float = 0.0
@@ -84,6 +86,7 @@ class DixonColes:
     as_of: date | None = None
     n_matches: int = 0
     level_shift: float = 0.0
+    ref_log_total: float = 0.0
 
     def fit(self, matches: pd.DataFrame, as_of: date) -> "DixonColes":
         """matches: columns match_date, home, away, ft_home, ft_away. Uses only rows dated before as_of."""
@@ -113,6 +116,9 @@ class DixonColes:
         self.defence = dict(zip(self.teams, res.x[3 + n:].tolist(), strict=True))
         self.level_shift = self.level_adjustment(m, self.level_window_days, self.level_shrink)
         self.mu += self.level_shift
+        eta_h = self.mu + self.home_adv + res.x[3:3 + n][hi] - res.x[3 + n:][ai]
+        eta_a = self.mu + res.x[3:3 + n][ai] - res.x[3 + n:][hi]
+        self.ref_log_total = float(np.log(np.exp(eta_h) + np.exp(eta_a)) @ w / w.sum())
         return self
 
     def level_adjustment(self, matches: pd.DataFrame, window_days: float, shrink: float) -> float:
@@ -127,7 +133,11 @@ class DixonColes:
         m = m[m["home"].isin(self.attack) & m["away"].isin(self.attack)]
         if m.empty:
             return 0.0
-        expected = sum(sum(self.lambdas(r.home, r.away)) for r in m.itertuples(index=False))
+        saved, self.total_compression = self.total_compression, 1.0
+        try:
+            expected = sum(sum(self.lambdas(r.home, r.away)) for r in m.itertuples(index=False))
+        finally:
+            self.total_compression = saved
         actual = float((m["ft_home"] + m["ft_away"]).sum())
         n = len(m)
         return float(np.log(actual / expected) * n / (n + shrink))
@@ -136,18 +146,31 @@ class DixonColes:
         """Expected goals. A team never seen in training gets the league-average rating (0, 0)."""
         a_h, d_h = self.attack.get(home, 0.0), self.defence.get(home, 0.0)
         a_a, d_a = self.attack.get(away, 0.0), self.defence.get(away, 0.0)
-        return (float(np.exp(self.mu + self.home_adv + a_h - d_a)), float(np.exp(self.mu + a_a - d_h)))
+        lam_h, lam_a = float(np.exp(self.mu + self.home_adv + a_h - d_a)), float(np.exp(self.mu + a_a - d_h))
+        if self.total_compression != 1.0:
+            k = float(np.exp((self.total_compression - 1.0) * (np.log(lam_h + lam_a) - self.ref_log_total)))
+            lam_h, lam_a = lam_h * k, lam_a * k
+        return lam_h, lam_a
 
     def score_matrix(self, home: str, away: str) -> np.ndarray:
         """P[i, j] = probability the match ends home i - away j, i, j in 0..max_goals. Sums to 1."""
-        lam_h, lam_a = self.lambdas(home, away)
+        return self.matrix_from_lambdas(*self.lambdas(home, away))
+
+    def matrix_from_lambdas(self, lam_h: float, lam_a: float) -> np.ndarray:
+        """Scoreline matrix for given expected goals (so adjusted lambdas can be priced the same way)."""
         g = np.arange(self.max_goals + 1)
-        p = np.outer(poisson.pmf(g, lam_h), poisson.pmf(g, lam_a))
+        p = np.outer(self._pmf(g, lam_h), self._pmf(g, lam_a))
         p[0, 0] *= 1 - lam_h * lam_a * self.rho
         p[0, 1] *= 1 + lam_h * self.rho
         p[1, 0] *= 1 + lam_a * self.rho
         p[1, 1] *= 1 - self.rho
         return p / p.sum()
+
+    def _pmf(self, g: np.ndarray, lam: float) -> np.ndarray:
+        if self.dispersion <= 0:
+            return poisson.pmf(g, lam)
+        r = 1.0 / self.dispersion
+        return nbinom.pmf(g, r, r / (r + lam))
 
     def known(self, team: str) -> bool:
         return team in self.attack

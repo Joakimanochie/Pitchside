@@ -161,5 +161,33 @@ held-out seasons (`scripts/tune_level.py --test`):
 | Average predicted over 2.5 (actual 53.67%) | 52.05% | 52.43% |
 
 The gain is real but small, and it closes only about a quarter of the gap. The first live week (47 matches, 54% predicted against 72% actual) is far
-bigger than this bias and is mostly small-sample variation. Not fixed: the model's probabilities are too spread at the low end (predicted 32% for over 2.5,
-happened 38%), which looks like goals being more variable than a Poisson allows. That needs an overdispersed goals distribution and is the next candidate.
+bigger than this bias and is mostly small-sample variation.
+
+## Form, head-to-head and the low end of over/under (still model 0.3.0, not yet used live)
+
+All three were tuned on 2019/20-2021/22 (five leagues pooled) and run once on 2022/23 onwards.
+
+**Recent form** (goals scored and conceded in a team's last 5-20 matches against what the fitted model expected, shrunk toward zero) and
+**head-to-head** (the same residual over the pair's meetings in the last 6-10 years) were both tried at several shrink strengths
+(`scripts/tune_signals.py`, `src/pitchside/models/signals.py`). On the tuning seasons every setting that moved predictions made the match result
+worse (1X2 log loss +0.0015 to +0.028); the heaviest shrinkage only converged back to the baseline. Held-out, the best form setting (last 10 matches,
+shrink 100) improved 1X2 log loss by 0.0016 (0.98813 to 0.98658) and left over/under and BTTS flat; head-to-head changed nothing (0.98815).
+Neither is shipped: the form gain is below what could be luck, and the model already has its two-year memory. They stay in the repo, tested,
+for revisiting when player and lineup data exists.
+
+**Negative binomial goals** (extra spread for the same mean) hardly moved over/under and made BTTS worse, and did not repair the low band, so goal
+variability was not the cause (`dispersion` option, off).
+
+**Total-goals compression** was. The model's expected totals were too extreme: where it expected few goals, more happened; where it expected many, fewer.
+Each match's expected total is now pulled toward the league's typical total (exponent 0.7, ratio between the two teams kept). Tuned on 2019-2021
+(`scripts/tune_totals.py`), then run once on 2022-2026:
+
+| Held-out 2022-2026 | without | with (0.7) |
+|---|---|---|
+| Over/under 2.5 log loss | 0.67669 | 0.67605 |
+| Both teams to score log loss | 0.68519 | 0.68441 |
+| 1X2 log loss | 0.98813 | 0.98842 |
+| Over 2.5 predicted below 40%: predicted / actual | 35.7% / 41.4% | 37.2% / 40.0% |
+
+Small gains on over/under and BTTS, a negligible 0.0003 loss on the match result. The simulator test (500 held-out matches) stays calibrated
+within about a point and the skill over the base rate is now B +3.8%, C +6.5%, D +2.0%, E +3.5% (was +3.7, +6.3, +2.5, +3.0).

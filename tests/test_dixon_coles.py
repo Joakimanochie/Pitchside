@@ -132,3 +132,29 @@ def test_level_adjustment_is_off_by_default_and_ignores_the_future():
     a = DixonColes(level_window_days=120, level_shrink=20).fit(df, as_of=cutoff)
     b = DixonColes(level_window_days=120, level_shrink=20).fit(future, as_of=cutoff)
     assert a.level_shift == b.level_shift
+
+
+def test_total_compression_pulls_totals_toward_the_typical_total_and_keeps_the_ratio():
+    df, _, _ = simulate(seasons=3)
+    cutoff = dt.date(2020, 3, 1)
+    plain = DixonColes().fit(df, as_of=cutoff)
+    squeezed = DixonColes(total_compression=0.5).fit(df, as_of=cutoff)
+    typical = float(np.exp(plain.ref_log_total))
+    totals = [(sum(plain.lambdas("T0", f"T{j}")), sum(squeezed.lambdas("T0", f"T{j}"))) for j in range(1, 12)]
+    assert all(abs(s - typical) <= abs(p - typical) + 1e-9 for p, s in totals)
+    lh_p, la_p = plain.lambdas("T0", "T1")
+    lh_s, la_s = squeezed.lambdas("T0", "T1")
+    assert lh_p / la_p == pytest.approx(lh_s / la_s)
+    assert DixonColes(total_compression=1.0).fit(df, as_of=cutoff).lambdas("T0", "T1") == plain.lambdas("T0", "T1")
+
+
+def test_dispersion_keeps_the_mean_and_makes_matrix_wider():
+    df, _, _ = simulate(seasons=3)
+    cutoff = dt.date(2020, 3, 1)
+    a = DixonColes().fit(df, as_of=cutoff)
+    b = DixonColes(dispersion=0.15).fit(df, as_of=cutoff)
+    goals = np.arange(a.max_goals + 1)
+    pa, pb = a.score_matrix("T0", "T1").sum(axis=1), b.score_matrix("T0", "T1").sum(axis=1)
+    assert pb.sum() == pytest.approx(1.0)
+    assert (pa @ goals) == pytest.approx(pb @ goals, rel=0.03)
+    assert pb @ (goals**2) > pa @ (goals**2)
