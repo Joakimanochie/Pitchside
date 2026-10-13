@@ -191,3 +191,14 @@ Each match's expected total is now pulled toward the league's typical total (exp
 
 Small gains on over/under and BTTS, a negligible 0.0003 loss on the match result. The simulator test (500 held-out matches) stays calibrated
 within about a point and the skill over the base rate is now B +3.8%, C +6.5%, D +2.0%, E +3.5% (was +3.7, +6.3, +2.5, +3.0).
+
+## Recent hit rates per market (last 5, 10 and 15 matches)
+
+Tested on the 7,300 held-out matches of the goals backtest with `scripts/test_recent_hit_rates.py`: each team's hit rate over its previous N matches for home win,
+draw, away win, over 2.5 goals and both teams to score (log loss, lower is better; model fitted on the earlier 60% by date and scored on the later 40%).
+
+- **On its own, a recent hit rate is a poor predictor.** Using "how often has this happened in the last N" as the probability scores worse than the model for every market
+  (for example over 2.5: 0.689 to 0.738 against the model's 0.679) and, for over 2.5 and both teams to score over the last 5 matches, worse than a coin flip (0.693).
+- **Added to the model it helps very little.** The gain is 0.0001 to 0.0022 log loss (at most 0.4%). Home win gains most with 15 matches (0.6155 to 0.6134); draw, over 2.5
+  and both teams to score gain nothing worth keeping. The model already counts those same matches, with recent ones weighted more.
+- This agrees with the earlier form test (`scripts/tune_signals.py`): short windows add noise.
