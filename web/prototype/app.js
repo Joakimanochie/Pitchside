@@ -319,9 +319,11 @@
     main.append(h('div', { class: 'wrap record' },
       h('div', { class: 'reveal' },
         h('h1', { class: 'display' }, 'The record, kept honestly'),
-        h('p', { class: 'lede', style: 'margin-top:1rem' }, 'Every prediction is stored before kickoff and scored after the match, and the stored predictions cannot be edited. Below: what is stored so far, then how the model did in tests on matches it had never seen.'),
-        h('p', { class: 'status-line' }, storedEl, ' predictions are stored for ', String(d.fixtures.length), ' upcoming matches. ', h('b', {}, '0'),
-          ' have been settled so far; the first results arrive after this weekend’s matches.')),
+        h('p', { class: 'lede', style: 'margin-top:1rem' }, 'Every prediction is stored before kickoff and scored after the match, and the stored predictions cannot be edited. Below: how it has done on real matches so far, then how the model did in tests on matches it had never seen.'),
+        h('p', { class: 'status-line' }, h('b', {}, String(d.live.n)), ' matches played and scored so far. ', storedEl, ' predictions are stored for ',
+          String(d.fixtures.length), ' upcoming matches.')),
+
+      liveSection(d.live),
 
       h('section', { class: 'reveal' }, h('h2', { class: 'h2' }, 'When it says 70%, does it happen 70% of the time?'),
         h('p', { class: 'muted' }, 'A held-out test: 500 real matches from the 2025/26 and 2026/27 seasons, scored on about 330,000 predictions. Each point is a group of predictions with a similar probability. Points on the dashed line mean the model’s numbers match reality. This is a test, not the live record.'),
@@ -341,7 +343,7 @@
         h('ul', { class: 'list', style: 'margin-top:1rem' },
           h('li', {}, h('strong', {}, 'Lineups, injuries and suspensions.'), ' Not used yet.'),
           h('li', {}, h('strong', {}, 'Confidence ratings.'), ' They need a calibration study of their own before any rating is shown.'),
-          h('li', {}, h('strong', {}, 'A live record.'), ' None exists until matches are played and scored; the tests above are not live results.'),
+          h('li', {}, h('strong', {}, 'A long live record.'), ` Only ${d.live.n} matches have been scored so far, which is too few to judge the model. The tests further down are not live results.`),
           h('li', {}, h('strong', {}, 'Markets beyond goals.'), ' Corners, cards, shots and players are not built yet.')))));
     countUp(storedEl);
   }
@@ -371,6 +373,35 @@
   function calibrationTable(points) {
     return table(['Predicted range', 'Average predicted', 'Actually happened', 'Predictions'],
       points.map((p) => [`${Math.round(p.from * 100)}–${Math.round(Math.min(p.to, 1) * 100)}%`, pct1(p.predicted), pct1(p.actual), p.n.toLocaleString()]));
+  }
+  function liveSection(L) {
+    const names = { home: 'Home win', draw: 'Draw', away: 'Away win', BUNDESLIGA: 'Bundesliga', EPL: 'Premier League', LALIGA: 'La Liga', LIGUE1: 'Ligue 1', SERIEA: 'Serie A' };
+    const days = (iso) => new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+    const first = L.matches[0], last = L.matches[L.matches.length - 1];
+    const rows = [['Home win', L.home], ['Draw', L.draw], ['Away win', L.away], ['Both teams to score', L.btts_yes], ['Over 2.5 goals', L.over25]];
+    const notes = [];
+    if (L.over25.actual - L.over25.predicted > 0.08) notes.push('Goals ran well above what the model expected.');
+    if (L.over25.predicted - L.over25.actual > 0.08) notes.push('Goals ran well below what the model expected.');
+    if (L.home.actual - L.home.predicted > 0.08) notes.push('Home teams won more often than predicted.');
+    if (L.home.predicted - L.home.actual > 0.08) notes.push('Home teams won less often than predicted.');
+    const results = L.matches.map((m) => [days(m.date), names[m.league] || m.league, `${m.home} v ${m.away}`, `${m.score[0]}–${m.score[1]}`,
+      `${pct0(m.p.home)} / ${pct0(m.p.draw)} / ${pct0(m.p.away)}`, names[m.pick], h('strong', {}, m.hit ? 'Right' : 'Missed')]);
+    return h('section', { class: 'reveal' }, h('h2', { class: 'h2' }, 'The live record so far'),
+      h('p', { class: 'muted' }, `${L.n} real matches between ${days(first.date)} and ${days(last.date)}, scored against the predictions stored before kickoff. ` +
+        `${L.n} matches is a small sample: a few results either way can move every number below, so read this as a first look, not a verdict.`),
+      h('div', { class: 'panel', style: 'margin-top:1.25rem' },
+        h('p', { class: 'status-line', style: 'margin:0 0 1rem' }, h('b', {}, `${L.pick_hits} of ${L.n}`), ` match results picked correctly (${pct0(L.pick_hits / L.n)}). On the match result the model scored `,
+          h('b', {}, L.log_loss.toFixed(3)), ` against ${L.log_loss_base.toFixed(3)} for simply using how often each outcome usually happens (lower is better).`),
+        h('div', { class: 'tbl-wrap' }, table(['Market', 'Predicted on average', 'What happened'], rows.map(([t, r]) => [t, pct1(r.predicted), pct1(r.actual)]))),
+        notes.length ? h('p', { class: 'muted', style: 'margin-top:1rem' }, `${notes.join(' ')} The model has a known tendency to expect too few goals; this many matches is too few to say whether that is luck or that flaw.`) : null),
+      h('div', { class: 'panel', style: 'margin-top:1rem' },
+        h('details', { class: 'data' }, h('summary', {}, `Every match scored (${L.n})`), h('div', { class: 'tbl-wrap' }, table(['Date', 'League', 'Match', 'Score', 'Home / draw / away', 'Model’s pick', ''], results)))),
+      h('div', { class: 'panel', style: 'margin-top:1rem' },
+        h('details', { class: 'data' }, h('summary', {}, `All ${L.selections.toLocaleString()} scored predictions, grouped by probability`),
+          h('div', { class: 'chart-wrap', style: 'margin-top:1rem' }, calibrationChart(L.calibration.map((c) => ({ ...c, to: c.from + 0.1 }))),
+            h('div', { class: 'tbl-wrap' }, calibrationTable(L.calibration.map((c) => ({ ...c, to: c.from + 0.1 })))),
+            h('p', { class: 'muted' }, `Predictions from the same match move together, so this is closer to ${L.n} independent results than ${L.selections.toLocaleString()}.`)))),
+      L.waiting_minutes ? h('p', { class: 'muted', style: 'margin-top:1rem' }, `${L.waiting_minutes.toLocaleString()} more predictions (first goal, goal times and similar) are waiting for verified goal minutes and are not counted yet.`) : null);
   }
   function familyTable(fams) {
     const names = { B: 'Halves', C: 'Game flow', D: 'Minutes', E: 'Combinations' };

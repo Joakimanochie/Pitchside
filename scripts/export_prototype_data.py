@@ -7,6 +7,7 @@ Usage: uv run python scripts/export_prototype_data.py
 """
 import csv
 import json
+import math
 import os
 import re
 from collections import defaultdict
@@ -61,6 +62,55 @@ def validation_cached() -> dict:
     return fresh
 
 
+def live_record(conn: psycopg.Connection, version: str) -> dict:
+    """Settled predictions of the current model version, from v_settled (live runs only, never backtests)."""
+    base = {sel: float(v) for sel, v in conn.execute(
+        "SELECT CASE WHEN ft_home > ft_away THEN 'home' WHEN ft_home = ft_away THEN 'draw' ELSE 'away' END, count(*)::float / sum(count(*)) OVER () "
+        "FROM matches WHERE status = 'finished' AND season >= 2019 AND ft_home IS NOT NULL GROUP BY 1")}
+    rows = conn.execute(
+        "SELECT s.match_id, s.league_id, m.match_date, th.canonical_name, ta.canonical_name, m.ft_home, m.ft_away, s.selection, s.probability, s.outcome_value "
+        "FROM v_settled s JOIN matches m ON m.id = s.match_id JOIN teams th ON th.id = m.home_team_id JOIN teams ta ON ta.id = m.away_team_id "
+        "WHERE s.model_version_id = %s AND s.run_type = 'weekly' AND s.market_id = '1x2' AND s.outcome_value IS NOT NULL", (version,)).fetchall()
+    by_match: dict = {}
+    for mid, league, day, home, away, fh, fa, sel, prob, out in rows:
+        m = by_match.setdefault(mid, {"league": league, "date": day.isoformat(), "home": home, "away": away, "score": [fh, fa], "p": {}, "actual": None})
+        m["p"][sel] = round(float(prob), 4)
+        if float(out) == 1:
+            m["actual"] = sel
+    matches = []
+    for m in by_match.values():
+        pick = max(m["p"], key=m["p"].get)
+        m["pick"], m["hit"] = pick, int(pick == m["actual"])
+        matches.append(m)
+    matches.sort(key=lambda m: (m["date"], m["league"], m["home"]))
+    n = len(matches)
+    ll = sum(-math.log(m["p"][m["actual"]]) for m in matches) / n if n else None
+    ll_base = sum(-math.log(base[m["actual"]]) for m in matches) / n if n else None
+
+    def rate(market: str, sel: str, line: float | None = None) -> dict:
+        q = ("SELECT count(*), avg(probability), avg(outcome_value) FROM v_settled WHERE model_version_id = %s AND run_type = 'weekly' "
+             "AND market_id = %s AND selection = %s AND outcome_value IS NOT NULL")
+        args: list = [version, market, sel]
+        if line is not None:
+            q += " AND line = %s"
+            args.append(line)
+        c, pr, ac = conn.execute(q, args).fetchone()
+        return {"n": c, "predicted": round(float(pr), 4) if c else None, "actual": round(float(ac), 4) if c else None}
+
+    calib = [{"from": float(b), "n": int(c), "predicted": round(float(pr), 4), "actual": round(float(ac), 4)} for b, c, pr, ac in conn.execute(
+        "SELECT floor(least(probability, 0.9999) * 10) / 10, count(*), avg(probability), avg(outcome_value) FROM v_settled "
+        "WHERE model_version_id = %s AND run_type = 'weekly' AND outcome_value IS NOT NULL GROUP BY 1 ORDER BY 1", (version,))]
+    fams = [{"family": f, "n": int(c), "log_loss": round(float(l), 4)} for f, c, l in conn.execute(
+        "SELECT family, count(*), avg(log_loss) FROM v_settled WHERE model_version_id = %s AND run_type = 'weekly' AND outcome_value IS NOT NULL GROUP BY 1 ORDER BY 1", (version,))]
+    waiting = conn.execute(
+        "SELECT count(*) FROM settlements st JOIN predictions p ON p.id = st.prediction_id JOIN prediction_runs r ON r.id = p.run_id "
+        "WHERE r.model_version_id = %s AND st.result = 'not_scorable'", (version,)).fetchone()[0]
+    return {"matches": matches, "n": n, "log_loss": ll, "log_loss_base": ll_base,
+            "pick_hits": sum(m["hit"] for m in matches), "home": rate("1x2", "home"), "draw": rate("1x2", "draw"), "away": rate("1x2", "away"),
+            "btts_yes": rate("btts", "yes"), "over25": rate("ou_total", "over", 2.5), "calibration": calib, "families": fams,
+            "selections": sum(f["n"] for f in fams), "waiting_minutes": int(waiting)}
+
+
 def main() -> None:
     _load_env()
     order = {mid: i for i, mid in enumerate(MARKETS)}
@@ -82,6 +132,8 @@ def main() -> None:
                 "AND p.match_id = ANY(%s) ORDER BY p.id", (version, ids)):
             preds[mid][market_id]["null" if line is None else str(float(line))].append([sel, round(float(prob), 4), 1 if pick else 0])
 
+        live = live_record(conn, version)
+
     markets = {mid: {"name": m.name, "family": m.family, "exclusive": m.exclusive, "order": order[mid]} for mid, m in MARKETS.items()}
     fixtures = []
     for mid, league, kickoff, home, away in matches:
@@ -91,7 +143,7 @@ def main() -> None:
     snapshot = {
         "generated_at": datetime.now(UTC).isoformat(timespec="seconds"), "model_version": version,
         "leagues": {lid: lg.name for lid, lg in LEAGUES.items()}, "markets": markets, "fixtures": fixtures,
-        "preds": {str(mid): preds[mid] for mid in ids}, "validation": validation_cached(),
+        "preds": {str(mid): preds[mid] for mid in ids}, "validation": validation_cached(), "live": live,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(snapshot, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
