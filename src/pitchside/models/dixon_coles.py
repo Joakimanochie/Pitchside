@@ -12,7 +12,7 @@ is what protects teams with few matches (promoted sides, early season).
 Only matches strictly before `as_of` are used. This is the leakage rule from BUILD.md section 8.
 """
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 
 import numpy as np
 import pandas as pd
@@ -72,6 +72,8 @@ class DixonColes:
     half_life_days: float = 365.0
     ridge: float = 2.0
     max_goals: int = MAX_GOALS
+    level_window_days: float = 0.0  # 0 = off; see level_adjustment
+    level_shrink: float = 60.0
     # fitted state
     teams: list[str] = field(default_factory=list)
     mu: float = 0.0
@@ -81,6 +83,7 @@ class DixonColes:
     defence: dict[str, float] = field(default_factory=dict)
     as_of: date | None = None
     n_matches: int = 0
+    level_shift: float = 0.0
 
     def fit(self, matches: pd.DataFrame, as_of: date) -> "DixonColes":
         """matches: columns match_date, home, away, ft_home, ft_away. Uses only rows dated before as_of."""
@@ -108,7 +111,26 @@ class DixonColes:
         self.mu, self.home_adv, self.rho = float(res.x[0]), float(res.x[1]), float(res.x[2])
         self.attack = dict(zip(self.teams, res.x[3:3 + n].tolist(), strict=True))
         self.defence = dict(zip(self.teams, res.x[3 + n:].tolist(), strict=True))
+        self.level_shift = self.level_adjustment(m, self.level_window_days, self.level_shrink)
+        self.mu += self.level_shift
         return self
+
+    def level_adjustment(self, matches: pd.DataFrame, window_days: float, shrink: float) -> float:
+        """Log-ratio of goals actually scored to goals the fitted model expected, over the last `window_days` before as_of.
+
+        Team strength changes slowly (long half-life) but the league's scoring level can move within a season, so
+        this follows it faster. The ratio is shrunk toward 1 by n / (n + shrink) so a short run of matches cannot swing it.
+        """
+        if self.as_of is None or window_days <= 0:
+            return 0.0
+        m = matches[(matches["match_date"] < self.as_of) & (matches["match_date"] >= self.as_of - timedelta(days=window_days))]
+        m = m[m["home"].isin(self.attack) & m["away"].isin(self.attack)]
+        if m.empty:
+            return 0.0
+        expected = sum(sum(self.lambdas(r.home, r.away)) for r in m.itertuples(index=False))
+        actual = float((m["ft_home"] + m["ft_away"]).sum())
+        n = len(m)
+        return float(np.log(actual / expected) * n / (n + shrink))
 
     def lambdas(self, home: str, away: str) -> tuple[float, float]:
         """Expected goals. A team never seen in training gets the league-average rating (0, 0)."""

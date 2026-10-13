@@ -34,9 +34,9 @@ from pitchside.settle.settle import settle_all
 from pitchside.sim.inputs import fit_split_table, fit_time_profile
 from pitchside.sim.pricing import price_all
 
-MODEL_VERSION = "goals-dc-0.2.0"   # 0.1.0 priced family A only; 0.2.0 adds the half/goal-timing simulator (families B-E)
+MODEL_VERSION = "goals-dc-0.3.0"   # 0.1.0 priced family A only; 0.2.0 adds the half/goal-timing simulator (B-E); 0.3.0 follows the recent scoring level
 FEATURE_VERSION = "scores-only-v1"
-MODEL_PARAMS = {"half_life_days": 730, "ridge": 2.0, "max_goals": 10, "n_sims": 50_000, "split": "empirical-table", "timing": "pooled-profile"}
+MODEL_PARAMS = {"half_life_days": 730, "ridge": 2.0, "level_window_days": 240, "level_shrink": 60, "max_goals": 10, "n_sims": 50_000, "split": "empirical-table", "timing": "pooled-profile"}
 N_SIMS = 50_000
 MIN_HISTORY_MATCHES = 1000  # about 2.5 seasons of one league; below this the strengths are too noisy to publish
 
@@ -106,7 +106,8 @@ def predict_week(conn: psycopg.Connection, league_id: str, as_of: date, days: in
         raise InsufficientHistoryError(
             f"{league_id}: only {len(history)} finished matches in the database, need at least {MIN_HISTORY_MATCHES}. "
             f"Run: uv run python scripts/load_history.py {league_id}")
-    model = DixonColes(half_life_days=MODEL_PARAMS["half_life_days"], ridge=MODEL_PARAMS["ridge"]).fit(history, as_of=as_of)
+    model = DixonColes(half_life_days=MODEL_PARAMS["half_life_days"], ridge=MODEL_PARAMS["ridge"],
+                       level_window_days=MODEL_PARAMS["level_window_days"], level_shrink=MODEL_PARAMS["level_shrink"]).fit(history, as_of=as_of)
     split = fit_split_table(conn)
     profile = fit_time_profile(conn)       # None when too few verified goal minutes exist: then only family A is priced
     families = "ABCDE" if profile is not None else "A"

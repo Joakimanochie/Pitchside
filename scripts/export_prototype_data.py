@@ -132,7 +132,12 @@ def main() -> None:
                 "AND p.match_id = ANY(%s) ORDER BY p.id", (version, ids)):
             preds[mid][market_id]["null" if line is None else str(float(line))].append([sel, round(float(prob), 4), 1 if pick else 0])
 
-        live = live_record(conn, version)
+        # the live record belongs to the newest model version that already has scored matches
+        scored = conn.execute(
+            "SELECT s.model_version_id FROM v_settled s JOIN prediction_runs r ON r.model_version_id = s.model_version_id AND r.run_type = 'weekly' "
+            "WHERE s.run_type = 'weekly' GROUP BY 1 ORDER BY max(r.created_at) DESC LIMIT 1").fetchone()
+        live = live_record(conn, scored[0] if scored else version)
+        live["model_version"] = scored[0] if scored else version
 
     markets = {mid: {"name": m.name, "family": m.family, "exclusive": m.exclusive, "order": order[mid]} for mid, m in MARKETS.items()}
     fixtures = []

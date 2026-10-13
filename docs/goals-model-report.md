@@ -144,3 +144,22 @@ What this says:
 4. **Limits.** 500 matches is a sample, so a single market's skill number is noisy and only the family-level and the
    calibration results are firm. The goal-timing profile is one pooled distribution for all teams and leagues; a team that
    scores early or late more than average is not modelled.
+
+## Following the recent scoring level (model 0.3.0)
+
+The 0.2.0 model slightly under-predicted goals: over 5 test seasons, 52.1% predicted for over 2.5 against 53.7% actual,
+worst in 2026/27 (52.5% against 58.8%). Team strengths move slowly (half-life 730 days) but the league's scoring level moves faster,
+so 0.3.0 shifts the league goal level by the ratio of goals actually scored to goals expected over the last 240 days, shrunk toward no change
+by n / (n + 60). Both numbers were chosen on 2019/20-2021/22 across the five leagues (`scripts/tune_level.py`), then run once on the
+held-out seasons (`scripts/tune_level.py --test`):
+
+| Held-out 2022-2026, five leagues | 0.2.0 | 0.3.0 |
+|---|---|---|
+| Over/under 2.5 log loss | 0.6774 | 0.6767 |
+| Both teams to score log loss | 0.6861 | 0.6852 |
+| 1X2 log loss | 0.9881 | 0.9881 |
+| Average predicted over 2.5 (actual 53.67%) | 52.05% | 52.43% |
+
+The gain is real but small, and it closes only about a quarter of the gap. The first live week (47 matches, 54% predicted against 72% actual) is far
+bigger than this bias and is mostly small-sample variation. Not fixed: the model's probabilities are too spread at the low end (predicted 32% for over 2.5,
+happened 38%), which looks like goals being more variable than a Poisson allows. That needs an overdispersed goals distribution and is the next candidate.

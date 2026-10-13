@@ -142,7 +142,8 @@ def test_predictions_equal_a_direct_fit_on_the_same_history(world):
     upsert_fixtures(world, "EPL", fixtures_payload(event(1, in_days(2), "Arsenal", "Leeds United")))
     today = datetime.now(UTC).date()
     predict_week(world, "EPL", today, days=8)
-    model = DixonColes(half_life_days=MODEL_PARAMS["half_life_days"], ridge=MODEL_PARAMS["ridge"]).fit(
+    model = DixonColes(half_life_days=MODEL_PARAMS["half_life_days"], ridge=MODEL_PARAMS["ridge"],
+                       level_window_days=MODEL_PARAMS["level_window_days"], level_shrink=MODEL_PARAMS["level_shrink"]).fit(
         load_history(world, "EPL"), as_of=today)
     expected = {(r["market_id"], r["line"], r["selection"]): r["probability"] for r in price_match(model.score_matrix("Arsenal", "Leeds United"))}
     stored = {(m, None if ln is None else float(ln), s): float(p) for m, ln, s, p in

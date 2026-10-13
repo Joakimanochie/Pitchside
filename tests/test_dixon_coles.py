@@ -104,3 +104,31 @@ def test_needs_enough_history():
     df, _, _ = simulate(n_teams=6, seasons=1)
     with pytest.raises(ValueError, match="at least 50"):
         DixonColes().fit(df, as_of=dt.date(2018, 8, 2))
+
+
+def _boosted(df, cutoff, days=120):
+    """Same matches, but every recent one has an extra goal at each end: the league suddenly scores more."""
+    out = df.copy()
+    recent = (out["match_date"] < cutoff) & (out["match_date"] >= cutoff - dt.timedelta(days=days))
+    out.loc[recent, ["ft_home", "ft_away"]] += 1
+    return out
+
+
+def test_level_adjustment_raises_goals_when_recent_scoring_runs_high():
+    df, _, _ = simulate(seasons=3)
+    cutoff = dt.date(2020, 3, 1)
+    plain = DixonColes().fit(_boosted(df, cutoff), as_of=cutoff)
+    adjusted = DixonColes(level_window_days=120, level_shrink=20).fit(_boosted(df, cutoff), as_of=cutoff)
+    assert adjusted.level_shift > 0
+    assert sum(adjusted.lambdas("T0", "T1")) > sum(plain.lambdas("T0", "T1"))
+
+
+def test_level_adjustment_is_off_by_default_and_ignores_the_future():
+    df, _, _ = simulate(seasons=3)
+    cutoff = dt.date(2020, 3, 1)
+    assert DixonColes().fit(df, as_of=cutoff).level_shift == 0.0
+    future = df.copy()
+    future.loc[future["match_date"] >= cutoff, ["ft_home", "ft_away"]] = [9, 0]
+    a = DixonColes(level_window_days=120, level_shrink=20).fit(df, as_of=cutoff)
+    b = DixonColes(level_window_days=120, level_shrink=20).fit(future, as_of=cutoff)
+    assert a.level_shift == b.level_shift
