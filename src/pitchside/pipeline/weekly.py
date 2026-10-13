@@ -29,6 +29,8 @@ from pitchside.leagues import LEAGUES
 from pitchside.markets.goals import price_match
 from pitchside.markets.registry import MARKETS
 from pitchside.models.dixon_coles import DixonColes
+from pitchside.odds.footballdata_fixtures import FootballDataFixtures
+from pitchside.odds.store import store_odds
 from pitchside.pipeline.goal_minutes import ingest_goal_minutes
 from pitchside.settle.settle import settle_all
 from pitchside.sim.inputs import fit_split_table, fit_time_profile
@@ -135,6 +137,13 @@ def predict_week(conn: psycopg.Connection, league_id: str, as_of: date, days: in
     return {"run_id": run_id, "matches": len(fixtures), "predictions": total, "families": families}
 
 
+def ingest_odds(conn: psycopg.Connection) -> dict:
+    """Snapshot the pre-match bookmaker prices published for the coming fixtures (comparison only; never a model input)."""
+    result = store_odds(conn, FootballDataFixtures())
+    conn.commit()
+    return {k: (len(v) if isinstance(v, list) else v) for k, v in result.items()}
+
+
 def run_leagues(conn: psycopg.Connection, league_ids: list[str], days: int = 8, force: bool = False,
                 ingest: bool = True) -> tuple[dict, dict]:
     """Run the pipeline for several leagues. One league failing never stops the others.
@@ -167,6 +176,7 @@ def run_leagues(conn: psycopg.Connection, league_ids: list[str], days: int = 8, 
     for lid in league_ids:
         attempt(lid, "fixtures", plan_fixtures, conn, lid, today, days)
         attempt(lid, "predictions", predict_week, conn, lid, today, days, force)
+    attempt("odds", "all", ingest_odds, conn)  # after fixtures exist, so the prices find their matches; one file covers every league
     return report, errors
 
 

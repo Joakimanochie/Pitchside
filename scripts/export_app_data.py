@@ -17,7 +17,10 @@ import psycopg
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import export_common as base
 
+from pitchside.confidence import load_rules
 from pitchside.db.migrate import _load_env
+from pitchside.markets.registry import MARKETS
+from pitchside.odds.compare import demargin, edge, expected_value, overround
 
 OUT = base.ROOT / "web" / "app" / "static" / "data"
 FORM_MATCHES, H2H_MATCHES = 6, 5
@@ -50,8 +53,44 @@ def meetings(conn: psycopg.Connection, home_id: int, away_id: int, before: str) 
     return out
 
 
+def odds_block(conn: psycopg.Connection, match_id: int, preds: dict, rules: dict) -> dict | None:
+    """Latest bookmaker prices for the match set against our probabilities: the market average (de-margined into the bookmakers' own view)
+    and the best price. None when no prices are stored yet."""
+    rows = conn.execute("SELECT bookmaker, market_id, line, selection, odds, fetched_at FROM v_latest_odds WHERE match_id = %s", (match_id,)).fetchall()
+    if not rows:
+        return None
+    grouped: dict = {}
+    for bookmaker, market, line, sel, odds, fetched in rows:
+        key = (market, None if line is None else float(line))
+        grouped.setdefault(key, {}).setdefault(bookmaker, {})[sel] = (float(odds), fetched)
+    markets, newest = [], None
+    for (market, line), books in sorted(grouped.items(), key=lambda kv: (list(MARKETS).index(kv[0][0]) if kv[0][0] in MARKETS else 99, kv[0][1] or 0)):
+        ours = {sel: (p, pick, tier) for sel, p, pick, tier in preds.get(market, {}).get("null" if line is None else str(float(line)), [])}
+        avg = books.get("avg")
+        if not ours or not avg or set(avg) != set(ours):
+            continue
+        sels = list(avg)
+        fair = dict(zip(sels, demargin([avg[sel][0] for sel in sels]), strict=True))
+        half_line = line is not None and abs(line * 2 - round(line * 2)) < 1e-9 and round(line * 2) % 2 != 0
+        whole_or_quarter = market == "asian_handicap" and not half_line   # the stake can be returned or split, which our probability excludes
+        best = books.get("max", {})
+        out = []
+        for sel in sels:
+            p, _pick, tier = ours[sel]
+            best_odds = best[sel][0] if sel in best else avg[sel][0]
+            out.append({"selection": sel, "p": p, "tier": tier, "fair": round(fair[sel], 4), "avg_odds": avg[sel][0], "best_odds": best_odds,
+                        "edge": round(edge(p, fair[sel]), 4), "ev": None if whole_or_quarter else round(expected_value(p, best_odds), 4)})
+        stamp = max(v[1] for v in avg.values())
+        newest = stamp if newest is None or stamp > newest else newest
+        markets.append({"market": market, "line": line, "margin": round(overround([avg[sel][0] for sel in sels]), 4), "stake_can_be_returned": bool(whole_or_quarter), "rows": out})
+    if not markets:
+        return None
+    return {"fetched_at": newest.astimezone(base.UTC).isoformat(timespec="minutes"), "source": "football-data.co.uk", "markets": markets}
+
+
 def main() -> None:
     _load_env()
+    rules = load_rules()
     with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
         snap = base.build_snapshot(conn)
         match_dir = OUT / "match"
@@ -64,13 +103,16 @@ def main() -> None:
             detail = {"id": f["id"], "league": f["league"], "kickoff": f["kickoff"], "home": f["home"], "away": f["away"], "p": f["p"], "ctx": f["ctx"],
                       "preds": snap["preds"][str(f["id"])],
                       "form": {"home": recent_results(conn, f["home_id"], day), "away": recent_results(conn, f["away_id"], day)},
-                      "h2h": meetings(conn, f["home_id"], f["away_id"], day)}
+                      "h2h": meetings(conn, f["home_id"], f["away_id"], day),
+                      "odds": odds_block(conn, f["id"], snap["preds"][str(f["id"])], rules)}
             (match_dir / f"{f['id']}.json").write_text(json.dumps(detail, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
             x12 = snap["preds"][str(f["id"])]["1x2"]["null"]
-            index_fixtures.append({"id": f["id"], "league": f["league"], "kickoff": f["kickoff"], "home": f["home"], "away": f["away"], "p": f["p"],
+            index_fixtures.append({"has_odds": detail["odds"] is not None, "id": f["id"], "league": f["league"], "kickoff": f["kickoff"], "home": f["home"], "away": f["away"], "p": f["p"],
                                    "tiers": {sel: tier for sel, _p, _pick, tier in x12}})
     index = {k: v for k, v in snap.items() if k not in ("fixtures", "preds")}
     index["fixtures"] = index_fixtures
+    backtest = base.ROOT / "data" / "processed" / "value_backtest.json"
+    index["value_backtest"] = json.loads(backtest.read_text(encoding="utf-8")) if backtest.exists() else None
     (OUT / "index.json").write_text(json.dumps(index, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
     size = sum(p.stat().st_size for p in OUT.rglob("*.json")) / 1e6
     print(f"wrote {OUT.relative_to(base.ROOT)}: {len(index_fixtures)} matches, {size:.2f} MB, model {snap['model_version']}")

@@ -35,7 +35,7 @@ def test_migrations_apply_once(conn):
     names = [r[0] for r in conn.execute("SELECT name FROM schema_migrations ORDER BY name")]
     assert names == ["001_warehouse.sql", "002_predictions.sql", "003_settlements.sql", "004_security_hardening.sql",
                      "005_track_record_views.sql",
-                     "006_prediction_context.sql"]
+                     "006_prediction_context.sql", "007_odds.sql"]
 
 
 def test_predictions_are_append_only(conn):

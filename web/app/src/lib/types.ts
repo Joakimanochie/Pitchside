@@ -31,6 +31,7 @@ export interface FixtureSummary {
 	away: string;
 	p: { home: number; draw: number; away: number };
 	tiers: Record<string, number>;
+	has_odds: boolean;
 }
 
 export interface FormResult {
@@ -50,6 +51,56 @@ export interface Meeting {
 	ft_away: number;
 }
 
+export interface OddsRow {
+	selection: string;
+	p: number;
+	tier: number;
+	fair: number;
+	avg_odds: number;
+	best_odds: number;
+	edge: number;
+	ev: number | null;
+}
+export interface OddsMarket {
+	market: string;
+	line: number | null;
+	margin: number;
+	stake_can_be_returned: boolean;
+	rows: OddsRow[];
+}
+export interface OddsBlock {
+	fetched_at: string;
+	source: string;
+	markets: OddsMarket[];
+}
+
+export interface BacktestRoi {
+	timing: 'opening' | 'closing';
+	group: string;
+	min_edge: number;
+	price: 'average' | 'best';
+	bets: number;
+	hit_rate: number;
+	avg_odds: number;
+	roi: number;
+	roi_ci: number | null;
+}
+export interface BlendResult {
+	matches: number;
+	checked_on: number;
+	market: number;
+	model: number;
+	blend: number;
+	weight_market: number;
+	weight_model: number;
+}
+export interface ValueBacktest {
+	period: { from: string; to: string; matches: number };
+	information: Record<'opening' | 'closing', Record<'1x2' | 'ou25', BlendResult>>;
+	back_everything: { timing: 'opening' | 'closing'; price: 'average' | 'best'; bets: number; roi: number }[];
+	roi: BacktestRoi[];
+}
+
 export interface MatchDetail {
 	id: number;
 	league: string;
@@ -61,6 +112,7 @@ export interface MatchDetail {
 	preds: Record<string, LinesMap>;
 	form: { home: FormResult[]; away: FormResult[] };
 	h2h: Meeting[];
+	odds: OddsBlock | null;
 }
 
 export interface CalibrationPoint {
@@ -125,6 +177,7 @@ export interface Index {
 		leagues: { id: string; name: string; matches: number; model: number; base: number; book: number; right_model: number; right_book: number }[];
 	};
 	live: Live;
+	value_backtest: ValueBacktest | null;
 	confidence: {
 		labels: string[];
 		validation: { fitted_on_matches: number; checked_on_matches: number; until: string; tiers: TierRow[] } | null;

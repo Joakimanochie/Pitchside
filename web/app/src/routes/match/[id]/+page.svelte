@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ConfBars from '#lib/components/ConfBars.svelte';
 	import MarketCard from '#lib/components/MarketCard.svelte';
+	import OddsCompare from '#lib/components/OddsCompare.svelte';
 	import Story from '#lib/components/Story.svelte';
 	import { TABS, matchesQuery, marketTitle, pct0, pct1, tabOf, type TabId } from '#lib/labels.js';
 	import { kickoffLong, tzLabel } from '#lib/time.svelte.js';
@@ -62,6 +63,8 @@
 			<p class="span">Lineups, injuries and suspensions are not used yet. The model knows past scores, how goals split between the halves, and when in a match goals tend to happen.</p>
 		</div>
 	</section>
+
+	<OddsCompare {match} {index} />
 
 	<div class="notice" style="margin-top:1rem">
 		<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5" /><path d="M8 7.2v4" /><circle cx="8" cy="4.8" r=".6" fill="currentColor" /></svg>

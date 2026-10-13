@@ -202,3 +202,14 @@ draw, away win, over 2.5 goals and both teams to score (log loss, lower is bette
 - **Added to the model it helps very little.** The gain is 0.0001 to 0.0022 log loss (at most 0.4%). Home win gains most with 15 matches (0.6155 to 0.6134); draw, over 2.5
   and both teams to score gain nothing worth keeping. The model already counts those same matches, with recent ones weighted more.
 - This agrees with the earlier form test (`scripts/tune_signals.py`): short windows add noise.
+
+## Against the bookmakers' prices, and would the gaps have paid (`scripts/backtest_value.py`)
+
+Model 0.3.0 settings, walk-forward over 7,379 matches (2022/23 to 2026/27, five leagues), against football-data.co.uk opening and closing prices (match result and over/under 2.5).
+
+- **Information.** The bookmakers' own probabilities beat the model everywhere (match result log loss at opening prices 0.9733 against 0.9908; over/under 2.5 0.6715 against 0.6776). A blend
+  of both did not beat the bookmakers by more than 0.0007: the model adds essentially nothing the price does not already contain.
+- **Betting.** Backing every selection returned -6.5% per unit at the average price and -2.6% at the best opening price. Backing only selections where our probability was at least 5 points above
+  the bookmakers' returned -8.7% at the best opening price (5,535 bets, ±3.8%), and the bigger the gap the worse it did (12 points: -10.9%, ±11%). The only positive groups are tiny
+  (High-confidence bets with 8+ points of gap: 109 bets, +13.5% ±54%) and not distinguishable from luck.
+- **Reading.** Where we disagree with the bookmakers it has usually been our number that was wrong. The comparison on the match page is information; it should not be sold as a way to find winning bets.

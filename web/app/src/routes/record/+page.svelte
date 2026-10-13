@@ -27,6 +27,21 @@
 		if (h.predicted! - h.actual! > 0.08) out.push('Home teams won less often than predicted.');
 		return out;
 	});
+	const bt = $derived(d.value_backtest);
+	const roiRows = $derived(bt ? bt.roi.filter((r) => r.timing === 'opening' && r.group === 'all' && r.price === 'best') : []);
+	const everything = $derived(bt ? bt.back_everything.find((r) => r.timing === 'opening' && r.price === 'best') : undefined);
+	const infoRows = $derived(
+		bt
+			? [
+					{ name: 'Match result, opening prices', r: bt.information.opening['1x2'] },
+					{ name: 'Match result, closing prices', r: bt.information.closing['1x2'] },
+					{ name: 'Over/under 2.5, opening prices', r: bt.information.opening.ou25 },
+					{ name: 'Over/under 2.5, closing prices', r: bt.information.closing.ou25 }
+				]
+			: []
+	);
+	const worseEverywhere = $derived(everything ? roiRows.filter((r) => r.min_edge >= 0.02).every((r) => r.roi < everything.roi) : false);
+	const ret = (r: number) => `${r > 0 ? '+' : r < 0 ? '−' : ''}${Math.abs(r * 100).toFixed(1)}%`;
 	const liveCalibration = $derived(L.calibration.map((c) => ({ ...c, to: c.from + 0.1 })));
 </script>
 
@@ -109,6 +124,56 @@
 						<tbody>{#each C.tiers as t (t.tier)}<tr><td>{t.tier}</td><td>{pct0(t.share)}</td><td>{pct1(t.predicted)}</td><td>{pct1(t.happened)}</td><td><strong>{pct1(t.skill)}</strong></td></tr>{/each}</tbody>
 					</table>
 				</div>
+			</div>
+		</section>
+	{/if}
+
+	{#if bt}
+		<section id="bookmakers" use:reveal>
+			<h2 class="h2">Does comparing with the bookmakers help?</h2>
+			<p class="muted">
+				We compared our probabilities with the bookmakers’ prices from football-data.co.uk over {bt.period.matches.toLocaleString()} matches ({shortDate(bt.period.from)} {bt.period.from.slice(0, 4)} to {shortDate(bt.period.to)} {bt.period.to.slice(0, 4)}),
+				for the match result and over/under 2.5 goals. The model never saw these matches, and “opening” prices are the ones published a few days before kickoff, which is what the match page shows.
+			</p>
+			<div class="panel" style="margin-top:1.25rem">
+				<h3 class="h3">Who predicted better?</h3>
+				<p class="muted small" style="margin-top:.4rem">Log loss on the later 40% of matches; lower is better. “Both blended” mixes our probabilities with the bookmakers’, with weights fitted on the earlier matches.</p>
+				<div class="tbl-wrap">
+					<table>
+						<thead><tr><th scope="col">Market and prices</th><th scope="col">Bookmakers</th><th scope="col">Our model</th><th scope="col">Both blended</th></tr></thead>
+						<tbody>
+							{#each infoRows as { name, r } (name)}
+								<tr><td>{name}</td><td><strong>{r.market.toFixed(4)}</strong></td><td>{r.model.toFixed(4)}</td><td>{r.blend.toFixed(4)}</td></tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+				<p class="muted" style="margin-top:1rem">The bookmakers’ prices predicted better than our model everywhere, and mixing our probabilities in added essentially nothing. Their prices already contain what our model knows, and more.</p>
+			</div>
+			<div class="panel" style="margin-top:1rem">
+				<h3 class="h3">Would backing our gaps have paid?</h3>
+				<p class="muted small" style="margin-top:.4rem">One unit staked on every selection where our probability was at least this many points above the bookmakers’, at the best opening price listed. Match result and over/under 2.5 together.</p>
+				<div class="tbl-wrap">
+					<table>
+						<thead><tr><th scope="col">Our probability above theirs by</th><th scope="col">Bets</th><th scope="col">Won</th><th scope="col">Return per unit staked</th><th scope="col">Margin of error</th></tr></thead>
+						<tbody>
+							{#if everything}
+								<tr><td>Back every selection</td><td>{everything.bets.toLocaleString()}</td><td>—</td><td><strong>{ret(everything.roi)}</strong></td><td>—</td></tr>
+							{/if}
+							{#each roiRows as r (r.min_edge)}
+								<tr><td>{r.min_edge === 0 ? 'Any gap' : `${Math.round(r.min_edge * 100)} points or more`}</td><td>{r.bets.toLocaleString()}</td><td>{pct0(r.hit_rate)}</td><td><strong>{ret(r.roi)}</strong></td><td>±{((r.roi_ci ?? 0) * 100).toFixed(1)}%</td></tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+				<p class="muted" style="margin-top:1rem">
+					{#if worseEverywhere}
+						Backing our gaps returned less than backing everything at every threshold, and the bigger the gap, the worse it did. When we disagreed with the bookmakers, it was usually our number that was wrong.
+					{:else}
+						Read the margins of error: the groups with few bets are too small to trust.
+					{/if}
+					Prices are the best across the bookmakers on football-data.co.uk; real accounts face stake limits and the best price is not always available. Nothing here is advice.
+				</p>
 			</div>
 		</section>
 	{/if}

@@ -17,6 +17,8 @@ Builder: HEO. Executor: Claude Code. Read `CLAUDE.md` first for the gstack setup
 
 - Production web app (2026-10-13): SvelteKit app live (private, behind Cloudflare Access) with fixtures, the match board, a deep-dive (scorelines, recent results, head to head) and the track record, rebuilt and redeployed by the daily pipeline.
 
+- Odds comparison (2026-10-14, Phase 7 core): pre-match prices from football-data.co.uk snapshotted daily (`odds_snapshots`, migration 007), compared with our probabilities on the match page (match result, over/under 2.5, main Asian handicap). The held-out test (`scripts/backtest_value.py`) found no value: bookmaker prices predicted better than the model at opening and closing, blending added nothing, and backing gaps lost more than backing everything. The page says so (`docs/odds-sources.md`).
+
 **Order from here (agreed with HEO on 2026-10-08)**
 1. ~~**Phase 2**: goal timing, the match simulator, and families B to E.~~ Done.
 2. ~~**Confidence tiers** (the backtest part of Phase 4).~~ Done. Rebuild with `scripts/backtest_tiers.py` then `scripts/build_tiers.py` when the model version changes.

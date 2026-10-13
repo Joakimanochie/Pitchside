@@ -301,3 +301,4 @@ td strong { font-weight: 600; }
 @media (max-width: 760px) {
   .panel { padding: 1.1rem; }
 }
+.h3 { font-size: 1.25rem; line-height: 1.25; }
