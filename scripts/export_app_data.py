@@ -17,12 +17,13 @@ import psycopg
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import export_common as base
 
-from pitchside.confidence import load_rules
+from pitchside.confidence import TIERS, load_rules, tier_for
 from pitchside.db.migrate import _load_env
 from pitchside.markets.registry import MARKETS
 from pitchside.odds.compare import demargin, edge, expected_value, overround
 
 OUT = base.ROOT / "web" / "app" / "static" / "data"
+RESULT_DAYS = 21   # finished matches stay on the results pages for three weeks
 FORM_MATCHES, H2H_MATCHES = 15, 5   # the last 15 results feed the recent-results lists and the 5/10/15 hit rates
 
 
@@ -89,6 +90,61 @@ def odds_block(conn: psycopg.Connection, match_id: int, preds: dict, rules: dict
     return {"fetched_at": newest.astimezone(base.UTC).isoformat(timespec="minutes"), "source": "football-data.co.uk", "markets": markets}
 
 
+OUTCOME = {"won": 1, "lost": 0, "push": 2}   # anything else (not scorable, void, not yet settled) is 3
+
+
+def export_results(conn: psycopg.Connection, rules: dict, out_dir: Path) -> list[dict]:
+    """One file per recently finished match with every stored prediction and how it turned out, plus the index entries for the results list."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for old in out_dir.glob("*.json"):
+        old.unlink()
+    matches = conn.execute(
+        "SELECT m.id, m.league_id, m.match_date, th.canonical_name, ta.canonical_name, m.ft_home, m.ft_away, m.ht_home, m.ht_away "
+        "FROM matches m JOIN teams th ON th.id = m.home_team_id JOIN teams ta ON ta.id = m.away_team_id "
+        "WHERE m.status = 'finished' AND m.match_date >= current_date - %s AND EXISTS (SELECT 1 FROM predictions p WHERE p.match_id = m.id) "
+        "ORDER BY m.match_date DESC, m.id", (RESULT_DAYS,)).fetchall()
+    entries = []
+    for mid, league, day, home, away, ft_h, ft_a, ht_h, ht_a in matches:
+        # newest run of each model line (goals, counts) that predicted this match
+        runs = {}
+        for run_id, version, created in conn.execute(
+                "SELECT r.id, r.model_version_id, r.created_at FROM prediction_runs r WHERE r.run_type = 'weekly' "
+                "AND EXISTS (SELECT 1 FROM predictions p WHERE p.run_id = r.id AND p.match_id = %s)", (mid,)):
+            line = version.split("-")[0]
+            if line not in runs or created > runs[line][1]:
+                runs[line] = (run_id, created, version)
+        preds: dict = {}
+        picks = picks_hit = high = high_hit = unscored = 0
+        for market, line, sel, prob, is_pick, result in conn.execute(
+                "SELECT p.market_id, p.line, p.selection, p.probability, p.is_pick, s.result FROM predictions p LEFT JOIN settlements s ON s.prediction_id = p.id "
+                "WHERE p.match_id = %s AND p.run_id = ANY(%s) ORDER BY p.id", (mid, [r[0] for r in runs.values()])):
+            if market not in MARKETS:
+                continue
+            tier = TIERS.index(tier_for(rules, market, MARKETS[market].family, float(prob)))
+            outcome = OUTCOME.get(result, 3)
+            preds.setdefault(market, {}).setdefault("null" if line is None else str(float(line)), []).append([sel, round(float(prob), 4), 1 if is_pick else 0, tier, outcome])
+            if outcome == 3:
+                unscored += 1
+            if is_pick and outcome in (0, 1):
+                picks += 1
+                picks_hit += outcome
+                if tier == 0:
+                    high += 1
+                    high_hit += outcome
+        stats = {}
+        for is_home, corners, yellow, red, shots, sot in conn.execute(
+                "SELECT is_home, corners, yellow_cards, red_cards, shots, shots_on_target FROM team_match_stats WHERE match_id = %s", (mid,)):
+            stats["home" if is_home else "away"] = {"corners": corners, "cards": None if yellow is None or red is None else yellow + red, "shots": shots, "sot": sot}
+        x12 = {sel: p for sel, p, *_ in preds.get("1x2", {}).get("null", [])}
+        actual = "home" if ft_h > ft_a else "draw" if ft_h == ft_a else "away"
+        entry = {"id": mid, "league": league, "date": day.isoformat(), "home": home, "away": away, "ft": [ft_h, ft_a], "ht": None if ht_h is None else [ht_h, ht_a],
+                 "p": x12, "actual": actual, "picks": picks, "picks_hit": picks_hit, "high_picks": high, "high_hit": high_hit}
+        detail = {**entry, "stats": stats, "versions": [r[2] for r in runs.values()], "not_scored": unscored, "preds": preds}
+        (out_dir / f"{mid}.json").write_text(json.dumps(detail, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
+        entries.append(entry)
+    return entries
+
+
 def main() -> None:
     _load_env()
     rules = load_rules()
@@ -110,7 +166,10 @@ def main() -> None:
             x12 = snap["preds"][str(f["id"])]["1x2"]["null"]
             index_fixtures.append({"has_odds": detail["odds"] is not None, "id": f["id"], "league": f["league"], "kickoff": f["kickoff"], "home": f["home"], "away": f["away"], "p": f["p"],
                                    "tiers": {sel: tier for sel, _p, _pick, tier in x12}})
+    with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
+        results = export_results(conn, rules, OUT / "result")
     index = {k: v for k, v in snap.items() if k not in ("fixtures", "preds")}
+    index["results"] = results
     index["fixtures"] = index_fixtures
     backtest = base.ROOT / "data" / "processed" / "value_backtest.json"
     index["value_backtest"] = json.loads(backtest.read_text(encoding="utf-8")) if backtest.exists() else None

@@ -9,7 +9,10 @@ const have = existsSync(`${dir}/index.json`) && existsSync(`${dir}/match`);
 
 describe.skipIf(!have)('every label on every upcoming match reads as words', () => {
 	const index: Index = have ? JSON.parse(readFileSync(`${dir}/index.json`, 'utf8')) : ({} as Index);
-	const matches: MatchDetail[] = have ? readdirSync(`${dir}/match`).filter((f) => f.endsWith('.json')).map((f) => JSON.parse(readFileSync(`${dir}/match/${f}`, 'utf8'))) : [];
+	const load = (sub: string): MatchDetail[] =>
+		have && existsSync(`${dir}/${sub}`) ? readdirSync(`${dir}/${sub}`).filter((f) => f.endsWith('.json')).map((f) => JSON.parse(readFileSync(`${dir}/${sub}/${f}`, 'utf8'))) : [];
+	// upcoming matches and recently finished ones (their predictions carry an extra outcome field, which labels ignore)
+	const matches: MatchDetail[] = [...load('match'), ...load('result')];
 
 	it('has matches to check', () => {
 		expect(matches.length).toBeGreaterThan(0);

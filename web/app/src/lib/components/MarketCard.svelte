@@ -2,20 +2,22 @@
 	import ConfBars from './ConfBars.svelte';
 	import { COLLAPSED_ROWS, SORT_BY_PROBABILITY, defaultLine, fair, lineChipLabel, marketTitle, pct1, selectionLabel, sortedLineKeys } from '#lib/labels.js';
 	import { reveal } from '#lib/reveal.js';
-	import type { Ctx, LinesMap, MarketMeta } from '#lib/types.js';
+	import type { Ctx, LinesMap, MarketMeta, Sel } from '#lib/types.js';
 
-	let { mid, meta, lines, ctx, highOnly }: { mid: string; meta: MarketMeta; lines: LinesMap; ctx: Ctx; highOnly: boolean } = $props();
+	let { mid, meta, lines, ctx, highOnly, outcome = 'all', showResults = false }: { mid: string; meta: MarketMeta; lines: LinesMap; ctx: Ctx; highOnly: boolean; outcome?: 'all' | 'won' | 'lost'; showResults?: boolean } = $props();
+
+	const keep = (r: Sel) => (!highOnly || r[3] === 0) && (outcome === 'all' || (outcome === 'won' ? r[4] === 1 : r[4] === 0));
 
 	let chosen = $state<string | null>(null);
 	let open = $state(false);
 
-	const lineKeys = $derived(sortedLineKeys(lines).filter((lk) => !highOnly || lines[lk].some((r) => r[3] === 0)));
+	const lineKeys = $derived(sortedLineKeys(lines).filter((lk) => lines[lk].some(keep)));
 	const current = $derived(
 		chosen !== null && lineKeys.includes(chosen) ? chosen : lineKeys.length ? defaultLine(Object.fromEntries(lineKeys.map((lk) => [lk, lines[lk]]))) : null
 	);
 	const allRows = $derived.by(() => {
 		if (current === null) return [];
-		const rows = lines[current].filter((r) => !highOnly || r[3] === 0);
+		const rows = lines[current].filter(keep);
 		return SORT_BY_PROBABILITY.has(mid) ? [...rows].sort((a, b) => b[1] - a[1]) : rows;
 	});
 	const collapsible = $derived(allRows.length > COLLAPSED_ROWS + 2);
@@ -37,10 +39,10 @@
 			<p class="refund">On a whole-number line, the stake is returned if the result lands exactly on it. Probabilities here exclude that case.</p>
 		{/if}
 		<ul class="sels">
-			{#each rows as [sel, p, pick, tier] (sel)}
+			{#each rows as [sel, p, pick, tier, res] (sel)}
 				<li class="sel" class:is-pick={pick}>
 					<div class="sel-top">
-						<span class="sel-name">{selectionLabel(mid, current, sel, ctx)}{#if pick}<span class="pick-tag">Pick</span>{/if}<ConfBars {tier} /></span>
+						<span class="sel-name">{selectionLabel(mid, current, sel, ctx)}{#if pick}<span class="pick-tag">Pick</span>{/if}{#if showResults && (res === 0 || res === 1)}<span class="res-tag" class:won={res === 1}>{res === 1 ? 'Won' : 'Lost'}</span>{:else if showResults && res === 2}<span class="res-tag returned">Stake returned</span>{/if}<ConfBars {tier} /></span>
 						<span class="sel-p">{pct1(p)}</span>
 						<span class="sel-fair" title="Fair odds: 1 divided by the probability">{fair(p)}</span>
 					</div>

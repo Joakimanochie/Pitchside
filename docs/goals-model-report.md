@@ -248,3 +248,17 @@ Calibration is close in every probability band for cards and shots on target; co
 which the confidence ratings pick up. Highest skill is on team counts and handicaps (shots handicap +12.8%); odd/even markets carry no information (+0.0% to +0.1%) and are rated Low. Corners over/under on the
 match total is the weakest of the main markets (+1.6%). Confidence ratings for families F to H come from the same rule as the others and held out in the same order
 (High 8.3%, Medium 3.5%, Low 1.2% overall; in each of F, G and H High beat Medium beat Low).
+
+## Newly promoted clubs (`scripts/analyse_promoted.py`)
+
+The goals model shrinks a club with little history toward the league average. If promoted sides are really weaker, their goals scored should come in below the model's expectation and goals conceded above it.
+Held-out (2022/23 onwards, 13,000 team-matches), by how many matches the club had played in the league in the previous three years:
+
+| Matches in last 3 years | Team-matches | Scored: actual - expected | Conceded: actual - expected |
+|---|---|---|---|
+| under 15 (promoted) | 438 | -0.050 (±0.05) | -0.016 |
+| 15 to 39 | 886 | +0.033 (±0.04) | +0.014 |
+| 40 to 79 | 2,056 | +0.014 (±0.02) | +0.009 |
+| 80 or more | 11,378 | +0.014 (±0.01) | +0.016 |
+
+No clear bias: the promoted group is within about one standard error of zero on both, so no special prior for promoted clubs is needed and none was added.

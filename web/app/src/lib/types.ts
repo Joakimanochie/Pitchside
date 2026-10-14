@@ -1,5 +1,5 @@
-/** [selection, probability, is_pick (0/1), confidence tier (0 High, 1 Medium, 2 Low)] */
-export type Sel = [string, number, number, number];
+/** [selection, probability, is_pick (0/1), confidence tier (0 High, 1 Medium, 2 Low), outcome on finished matches (1 won, 0 lost, 2 stake returned, 3 not scored)] */
+export type Sel = [string, number, number, number, number?];
 /** line key ('null' for markets without a line) -> selections */
 export type LinesMap = Record<string, Sel[]>;
 
@@ -103,6 +103,29 @@ export interface ValueBacktest {
 	roi: BacktestRoi[];
 }
 
+export interface ResultEntry {
+	id: number;
+	league: string;
+	date: string;
+	home: string;
+	away: string;
+	ft: [number, number];
+	ht: [number, number] | null;
+	p: { home?: number; draw?: number; away?: number };
+	actual: 'home' | 'draw' | 'away';
+	picks: number;
+	picks_hit: number;
+	high_picks: number;
+	high_hit: number;
+}
+
+export interface ResultDetail extends ResultEntry {
+	stats: Partial<Record<'home' | 'away', { corners: number | null; cards: number | null; shots: number | null; sot: number | null }>>;
+	versions: string[];
+	not_scored: number;
+	preds: Record<string, LinesMap>;
+}
+
 export interface MatchDetail {
 	id: number;
 	league: string;
@@ -180,6 +203,7 @@ export interface Index {
 	};
 	live: Live;
 	value_backtest: ValueBacktest | null;
+	results: ResultEntry[];
 	confidence: {
 		labels: string[];
 		validation: { fitted_on_matches: number; checked_on_matches: number; until: string; tiers: TierRow[] } | null;
