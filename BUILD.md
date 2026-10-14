@@ -19,6 +19,8 @@ Builder: HEO. Executor: Claude Code. Read `CLAUDE.md` first for the gstack setup
 
 - Odds comparison (2026-10-14, Phase 7 core): pre-match prices from football-data.co.uk snapshotted daily (`odds_snapshots`, migration 007), compared with our probabilities on the match page (match result, over/under 2.5, main Asian handicap). The held-out test (`scripts/backtest_value.py`) found no value: bookmaker prices predicted better than the model at opening and closing, blending added nothing, and backing gaps lost more than backing everything. The page says so (`docs/odds-sources.md`).
 
+- Expected-goals signal (2026-10-14): ratings fitted to goals blended with Understat xG improved every market slightly on held-out matches (0.04% to 0.1%), too little to justify a new feed and model version now; the code stays in, switched off. Recent per-market hit rates (last 5/10/15) are shown on the match page as context beside the model's probability, since tests found them poor predictors on their own (`docs/goals-model-report.md`).
+
 **Order from here (agreed with HEO on 2026-10-08)**
 1. ~~**Phase 2**: goal timing, the match simulator, and families B to E.~~ Done.
 2. ~~**Confidence tiers** (the backtest part of Phase 4).~~ Done. Rebuild with `scripts/backtest_tiers.py` then `scripts/build_tiers.py` when the model version changes.

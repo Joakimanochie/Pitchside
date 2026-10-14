@@ -33,8 +33,13 @@ def _tau(hg, ag, lam_h, lam_a, rho):
     return np.clip(t, 1e-10, None), (m00, m01, m10, m11)
 
 
-def neg_log_likelihood(theta, hi, ai, hg, ag, w, n_teams, ridge):
-    """Penalised negative weighted log-likelihood and its exact gradient."""
+def neg_log_likelihood(theta, hi, ai, hg, ag, w, n_teams, ridge, hg_t=None, ag_t=None):
+    """Penalised negative weighted log-likelihood and its exact gradient.
+
+    hg, ag are the real goals (they decide where the low-score correction applies). hg_t, ag_t are the targets the Poisson part is fitted to; they
+    default to the goals and can be goals blended with expected goals (xG), which are less noisy than goals themselves."""
+    hg_t = hg if hg_t is None else hg_t
+    ag_t = ag if ag_t is None else ag_t
     mu, adv, rho = theta[0], theta[1], theta[2]
     att, dfn = theta[3:3 + n_teams], theta[3 + n_teams:]
     eta_h = mu + adv + att[hi] - dfn[ai]
@@ -42,7 +47,7 @@ def neg_log_likelihood(theta, hi, ai, hg, ag, w, n_teams, ridge):
     lam_h, lam_a = np.exp(eta_h), np.exp(eta_a)
 
     tau, (m00, m01, m10, m11) = _tau(hg, ag, lam_h, lam_a, rho)
-    ll = w * (hg * eta_h - lam_h + ag * eta_a - lam_a + np.log(tau))
+    ll = w * (hg_t * eta_h - lam_h + ag_t * eta_a - lam_a + np.log(tau))
 
     # d log(tau) / d lambda_h, d lambda_a, d rho
     dh = np.where(m00, -lam_a * rho / tau, 0.0) + np.where(m01, rho / tau, 0.0)
@@ -50,8 +55,8 @@ def neg_log_likelihood(theta, hi, ai, hg, ag, w, n_teams, ridge):
     dr = (np.where(m00, -lam_h * lam_a / tau, 0.0) + np.where(m01, lam_h / tau, 0.0)
           + np.where(m10, lam_a / tau, 0.0) + np.where(m11, -1.0 / tau, 0.0))
 
-    g_h = w * (hg - lam_h + lam_h * dh)  # d ll / d eta_home
-    g_a = w * (ag - lam_a + lam_a * da)
+    g_h = w * (hg_t - lam_h + lam_h * dh)  # d ll / d eta_home
+    g_a = w * (ag_t - lam_a + lam_a * da)
 
     grad = np.empty_like(theta)
     grad[0] = g_h.sum() + g_a.sum()
@@ -74,6 +79,7 @@ class DixonColes:
     max_goals: int = MAX_GOALS
     level_window_days: float = 0.0  # 0 = off; see level_adjustment
     level_shrink: float = 60.0
+    xg_weight: float = 0.0  # 0 = fit to goals; w > 0 fits to (1 - w) * goals + w * xG where the matches carry xg_home / xg_away
     total_compression: float = 1.0  # < 1 pulls each match's expected total goals toward the league's typical total (ratio kept)
     dispersion: float = 0.0  # 0 = Poisson goals; alpha > 0 gives variance lam + alpha * lam^2 (negative binomial), same mean
     # fitted state
@@ -89,7 +95,7 @@ class DixonColes:
     ref_log_total: float = 0.0
 
     def fit(self, matches: pd.DataFrame, as_of: date) -> "DixonColes":
-        """matches: columns match_date, home, away, ft_home, ft_away. Uses only rows dated before as_of."""
+        """matches: columns match_date, home, away, ft_home, ft_away (and optionally xg_home, xg_away). Uses only rows dated before as_of."""
         m = matches[matches["match_date"] < as_of]
         if len(m) < 50:
             raise ValueError(f"need at least 50 matches before {as_of}, got {len(m)}")
@@ -101,13 +107,19 @@ class DixonColes:
         ai = m["away"].map(idx).to_numpy()
         hg = m["ft_home"].to_numpy(dtype=float)
         ag = m["ft_away"].to_numpy(dtype=float)
+        hg_t, ag_t = hg, ag
+        if self.xg_weight > 0 and {"xg_home", "xg_away"} <= set(m.columns):
+            xh, xa = m["xg_home"].to_numpy(dtype=float), m["xg_away"].to_numpy(dtype=float)
+            have = ~(np.isnan(xh) | np.isnan(xa))
+            hg_t = np.where(have, (1 - self.xg_weight) * hg + self.xg_weight * np.nan_to_num(xh), hg)
+            ag_t = np.where(have, (1 - self.xg_weight) * ag + self.xg_weight * np.nan_to_num(xa), ag)
         age = np.array([(as_of - d).days for d in m["match_date"]], dtype=float)
         w = 0.5 ** (age / self.half_life_days)
 
         theta0 = np.zeros(3 + 2 * n)
-        theta0[0] = np.log((hg @ w + ag @ w) / (2 * w.sum()))
+        theta0[0] = np.log((hg_t @ w + ag_t @ w) / (2 * w.sum()))
         bounds = [(None, None), (None, None), (-RHO_BOUND, RHO_BOUND)] + [(None, None)] * (2 * n)
-        res = minimize(neg_log_likelihood, theta0, args=(hi, ai, hg, ag, w, n, self.ridge),
+        res = minimize(neg_log_likelihood, theta0, args=(hi, ai, hg, ag, w, n, self.ridge, hg_t, ag_t),
                        jac=True, method="L-BFGS-B", bounds=bounds, options={"maxiter": 500})
         if not res.success and res.status != 1:  # status 1 = iteration limit, still usable
             raise RuntimeError(f"Dixon-Coles fit failed: {res.message}")

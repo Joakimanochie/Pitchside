@@ -158,3 +158,37 @@ def test_dispersion_keeps_the_mean_and_makes_matrix_wider():
     assert pb.sum() == pytest.approx(1.0)
     assert (pa @ goals) == pytest.approx(pb @ goals, rel=0.03)
     assert pb @ (goals**2) > pa @ (goals**2)
+
+
+def test_gradient_is_exact_with_blended_targets():
+    df, _, _ = simulate(n_teams=6, seasons=2)
+    teams = sorted(set(df["home"]) | set(df["away"]))
+    hi, ai, hg, ag = arrays(df, teams)
+    rng = np.random.default_rng(1)
+    hg_t, ag_t = hg * 0.6 + rng.random(len(hg)) * 1.4, ag * 0.6 + rng.random(len(ag)) * 1.4
+    n = len(teams)
+    theta = rng.normal(0, 0.1, 3 + 2 * n)
+    w = np.ones(len(hg))
+    f = lambda t: neg_log_likelihood(t, hi, ai, hg, ag, w, n, 2.0, hg_t, ag_t)[0]
+    analytic = neg_log_likelihood(theta, hi, ai, hg, ag, w, n, 2.0, hg_t, ag_t)[1]
+    numeric = approx_fprime(theta, f, 1e-6)
+    np.testing.assert_allclose(analytic, numeric, rtol=1e-4, atol=1e-4)
+
+
+def test_xg_weight_zero_changes_nothing_and_missing_xg_falls_back_to_goals():
+    df, _, _ = simulate(seasons=3)
+    cutoff = dt.date(2020, 3, 1)
+    plain = DixonColes().fit(df, as_of=cutoff).lambdas("T0", "T1")
+    with_cols = df.assign(xg_home=df["ft_home"] + 0.7, xg_away=df["ft_away"] + 0.7)
+    assert DixonColes(xg_weight=0.0).fit(with_cols, as_of=cutoff).lambdas("T0", "T1") == plain
+    nan_xg = df.assign(xg_home=np.nan, xg_away=np.nan)
+    assert DixonColes(xg_weight=0.5).fit(nan_xg, as_of=cutoff).lambdas("T0", "T1") == plain
+
+
+def test_xg_pulls_ratings_toward_what_the_chances_said():
+    df, _, _ = simulate(seasons=3)
+    cutoff = dt.date(2020, 3, 1)
+    boosted = df.assign(xg_home=df["ft_home"] + 1.0, xg_away=df["ft_away"] + 1.0)   # chances said far more goals than were scored
+    plain = DixonColes().fit(boosted, as_of=cutoff)
+    blended = DixonColes(xg_weight=0.5).fit(boosted, as_of=cutoff)
+    assert sum(blended.lambdas("T0", "T1")) > sum(plain.lambdas("T0", "T1"))

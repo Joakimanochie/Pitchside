@@ -40,6 +40,8 @@ export interface FormResult {
 	home: boolean;
 	gf: number;
 	ga: number;
+	hf?: number | null;
+	ha?: number | null;
 	result: 'W' | 'D' | 'L';
 }
 

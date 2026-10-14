@@ -23,20 +23,21 @@ from pitchside.markets.registry import MARKETS
 from pitchside.odds.compare import demargin, edge, expected_value, overround
 
 OUT = base.ROOT / "web" / "app" / "static" / "data"
-FORM_MATCHES, H2H_MATCHES = 6, 5
+FORM_MATCHES, H2H_MATCHES = 15, 5   # the last 15 results feed the recent-results lists and the 5/10/15 hit rates
 
 
 def recent_results(conn: psycopg.Connection, team_id: int, before: str) -> list[dict]:
-    """The team's last finished matches before the date, newest first, from its own point of view."""
+    """The team's last finished matches before the date, newest first, from its own point of view (with half-time goals where known)."""
     out = []
-    for day, home_id, ft_h, ft_a, hn, an in conn.execute(
-            "SELECT m.match_date, m.home_team_id, m.ft_home, m.ft_away, th.canonical_name, ta.canonical_name FROM matches m "
+    for day, home_id, ft_h, ft_a, ht_h, ht_a, hn, an in conn.execute(
+            "SELECT m.match_date, m.home_team_id, m.ft_home, m.ft_away, m.ht_home, m.ht_away, th.canonical_name, ta.canonical_name FROM matches m "
             "JOIN teams th ON th.id = m.home_team_id JOIN teams ta ON ta.id = m.away_team_id "
             "WHERE m.status = 'finished' AND m.match_date < %s AND (m.home_team_id = %s OR m.away_team_id = %s) "
             "ORDER BY m.match_date DESC LIMIT %s", (before, team_id, team_id, FORM_MATCHES)):
         home = home_id == team_id
         gf, ga = (ft_h, ft_a) if home else (ft_a, ft_h)
-        out.append({"date": day.isoformat(), "opponent": an if home else hn, "home": home, "gf": gf, "ga": ga,
+        hf, ha = (ht_h, ht_a) if home else (ht_a, ht_h)
+        out.append({"date": day.isoformat(), "opponent": an if home else hn, "home": home, "gf": gf, "ga": ga, "hf": hf, "ha": ha,
                     "result": "W" if gf > ga else "D" if gf == ga else "L"})
     return out
 

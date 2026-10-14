@@ -1,4 +1,5 @@
 <script lang="ts">
+	import RecentRates from './RecentRates.svelte';
 	import { pct0, pct1 } from '#lib/labels.js';
 	import { longDate, shortDate } from '#lib/time.svelte.js';
 	import type { FormResult, MatchDetail } from '#lib/types.js';
@@ -27,8 +28,8 @@
 		return { w, d, l: rs.length - w - d, gf: rs.reduce((s, r) => s + r.gf, 0), ga: rs.reduce((s, r) => s + r.ga, 0) };
 	}
 	const sides = $derived([
-		{ name: match.home, results: match.form.home, t: tally(match.form.home) },
-		{ name: match.away, results: match.form.away, t: tally(match.form.away) }
+		{ name: match.home, results: match.form.home, t: tally(match.form.home.slice(0, 6)) },
+		{ name: match.away, results: match.form.away, t: tally(match.form.away.slice(0, 6)) }
 	]);
 	const h2hHomeWins = $derived(match.h2h.filter((m) => (m.home === match.home ? m.ft_home > m.ft_away : m.ft_away > m.ft_home)).length);
 	const h2hAwayWins = $derived(match.h2h.filter((m) => (m.home === match.away ? m.ft_home > m.ft_away : m.ft_away > m.ft_home)).length);
@@ -84,9 +85,9 @@
 				<div>
 					<h3 class="team">{s.name}</h3>
 					{#if s.results.length}
-						<p class="muted small">Last {s.results.length}: won {s.t.w}, drawn {s.t.d}, lost {s.t.l}. Scored {s.t.gf}, conceded {s.t.ga}.</p>
+						<p class="muted small">Last {Math.min(6, s.results.length)}: won {s.t.w}, drawn {s.t.d}, lost {s.t.l}. Scored {s.t.gf}, conceded {s.t.ga}.</p>
 						<ol class="results">
-							{#each s.results as r (r.date + r.opponent)}
+							{#each s.results.slice(0, 6) as r (r.date + r.opponent)}
 								<li><span class="r r-{r.result}" aria-label={r.result === 'W' ? 'Win' : r.result === 'D' ? 'Draw' : 'Loss'}>{r.result}</span>
 									<span class="opp">{r.home ? 'v' : 'at'} {r.opponent}</span><span class="sc">{r.gf}–{r.ga}</span><span class="dt">{shortDate(r.date)}</span></li>
 							{/each}
@@ -112,6 +113,8 @@
 			<p class="muted small">These sides have not met in the matches stored.</p>
 		{/if}
 	</div>
+
+	<RecentRates {match} />
 
 	<p class="muted small context-note">Results and head-to-head are shown for context. The model does not use them directly: in tests, adding recent form or head-to-head did not make its predictions better than its team ratings already are.</p>
 </section>

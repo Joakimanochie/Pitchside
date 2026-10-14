@@ -213,3 +213,18 @@ Model 0.3.0 settings, walk-forward over 7,379 matches (2022/23 to 2026/27, five 
   the bookmakers' returned -8.7% at the best opening price (5,535 bets, ±3.8%), and the bigger the gap the worse it did (12 points: -10.9%, ±11%). The only positive groups are tiny
   (High-confidence bets with 8+ points of gap: 109 bets, +13.5% ±54%) and not distinguishable from luck.
 - **Reading.** Where we disagree with the bookmakers it has usually been our number that was wrong. The comparison on the match page is information; it should not be sold as a way to find winning bets.
+
+## Fitting to expected goals as well as goals (`scripts/tune_xg.py`, not adopted)
+
+Team ratings can be fitted to a blend of real goals and expected goals (Understat xG, 2014/15 onward, `scripts/pull_understat_xg.py`): target = (1 - w) goals + w xG, with the
+low-score correction still on real goals (`xg_weight` in `DixonColes`). Tuned on 2019/20-2021/22, then run once on 2022/23 onwards (five leagues, weekly refits, 0.3.0 settings otherwise).
+
+| Held-out 2022-2026 | goals only | w = 0.5 |
+|---|---|---|
+| 1X2 log loss | 0.98842 | 0.98798 |
+| Over/under 2.5 log loss | 0.67605 | 0.67575 |
+| Both teams to score log loss | 0.68441 | 0.68346 |
+
+Weight 0.5 was best on the tuning seasons for 1X2 and over/under (0.25 and 0.75 were close; 1.0 was worse than goals alone). The gains are positive on all three markets but small (0.04% on the match
+result, about 0.1% on both teams to score), well below the gap to the bookmakers. Shipping it would need a daily xG feed, a new model version and a full rebuild of the confidence ratings, so it is left
+in the code, tested and switched off. Where it should matter more is clubs with little history (promoted sides), which is the next thing to test.
