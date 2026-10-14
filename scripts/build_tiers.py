@@ -6,6 +6,7 @@
 Usage: uv run python scripts/build_tiers.py
 """
 import json
+from pathlib import Path
 
 import pandas as pd
 
@@ -17,7 +18,8 @@ from pitchside.confidence import (
     tier_for,
 )
 
-SRC = "data/raw/tier_backtest.csv.gz"
+SRC = "data/raw/tier_backtest.csv.gz"            # families A-E (scripts/backtest_tiers.py)
+COUNTS = "data/raw/count_backtest.csv.gz"        # families F-H (scripts/backtest_counts.py), added when present
 
 
 def summarise(rows: pd.DataFrame, label: str) -> pd.DataFrame:
@@ -32,6 +34,8 @@ def summarise(rows: pd.DataFrame, label: str) -> pd.DataFrame:
 
 def main() -> None:
     df = pd.read_csv(SRC, parse_dates=["date"])
+    if Path(COUNTS).exists():
+        df = pd.concat([df, pd.read_csv(COUNTS, parse_dates=["date"])], ignore_index=True)
     df["line"] = df["line"].astype(float)
     cut = df["date"].sort_values().iloc[int(len(df) * 0.6)]
     fit, test = df[df["date"] < cut], df[df["date"] >= cut]

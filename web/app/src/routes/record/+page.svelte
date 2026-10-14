@@ -14,7 +14,7 @@
 	const first = $derived(L.matches[0]);
 	const last = $derived(L.matches[L.matches.length - 1]);
 	const NAMES: Record<string, string> = { home: 'Home win', draw: 'Draw', away: 'Away win', BUNDESLIGA: 'Bundesliga', EPL: 'Premier League', LALIGA: 'La Liga', LIGUE1: 'Ligue 1', SERIEA: 'Serie A' };
-	const FAMILIES: Record<string, string> = { B: 'Halves', C: 'Game flow', D: 'Minutes', E: 'Combinations' };
+	const FAMILIES: Record<string, string> = { B: 'Halves', C: 'Game flow', D: 'Minutes', E: 'Combinations', F: 'Corners', G: 'Cards', H: 'Shots and shots on target' };
 	const marketRows = $derived<[string, { n: number; predicted: number | null; actual: number | null }][]>([
 		['Home win', L.home], ['Draw', L.draw], ['Away win', L.away], ['Both teams to score', L.btts_yes], ['Over 2.5 goals', L.over25]
 	]);
@@ -230,7 +230,7 @@
 			<li><strong>Lineups, injuries and suspensions.</strong> Not used yet.</li>
 			<li><strong>How stable a probability is.</strong> The confidence ratings do not yet include how much a number would move if the model were refitted.</li>
 			<li><strong>A long live record.</strong> Only {L.n} matches have been scored so far, which is too few to judge the model. The tests further down are not live results.</li>
-			<li><strong>Markets beyond goals.</strong> Corners, cards, shots and players are not built yet.</li>
+			<li><strong>Player markets, and half-by-half corners and cards.</strong> Not built: they need lineups and half-level data we do not have.</li>
 		</ul>
 	</section>
 </div>

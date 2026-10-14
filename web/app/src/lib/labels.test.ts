@@ -34,11 +34,27 @@ describe('yes/no questions and combos', () => {
 	});
 });
 
+describe('corners, cards and shots', () => {
+	it('labels handicaps and who-has-more selections with the team names', () => {
+		expect(selectionLabel('corners_ah', '-1.5', 'home', ctx)).toBe('Arsenal −1.5');
+		expect(selectionLabel('cards_ah', '0.5', 'away', ctx)).toBe('Leeds United −0.5');
+		expect(selectionLabel('corners_x12', 'null', 'draw', ctx)).toBe('Draw');
+		expect(lineChipLabel('shots_ah', '-2.5')).toBe('−2.5');
+		expect(selectionLabel('corners_ou_total', '9.5', 'over', ctx)).toBe('Over 9.5');
+	});
+	it('files them under their own tabs', () => {
+		expect(tabOf('corners_ou_total', { name: 'Corners Over/Under', family: 'F', exclusive: true, order: 1 })).toBe('corners');
+		expect(tabOf('cards_ou_total', { name: 'Cards Over/Under', family: 'G', exclusive: true, order: 2 })).toBe('cards');
+		expect(tabOf('sot_ou_total', { name: 'Shots on Target Over/Under', family: 'H', exclusive: true, order: 3 })).toBe('shots');
+	});
+});
+
 describe('search', () => {
 	it('finds "1st Goal" when someone types "first goal"', () => {
 		expect(matchesQuery('1st Goal', 'first goal')).toBe(true);
 		expect(matchesQuery('1st Goal', '1st goal')).toBe(true);
 		expect(matchesQuery('Corners', 'first goal')).toBe(false);
+		expect(matchesQuery('Corners Over/Under', 'corners')).toBe(true);
 	});
 	it('knows btts and half time/full time', () => {
 		expect(matchesQuery('GG/NG', 'btts')).toBe(true);

@@ -220,4 +220,4 @@ def test_seed_markets_registers_every_family_and_is_idempotent(conn):
     assert n == len(EVERY_MARKET) > len(FAMILY_A)
     assert conn.execute("SELECT count(*) FROM markets").fetchone()[0] == len(EVERY_MARKET)
     assert conn.execute("SELECT count(*) FROM markets WHERE family = 'A'").fetchone()[0] == len(FAMILY_A)
-    assert {r[0] for r in conn.execute("SELECT DISTINCT family FROM markets")} == {"A", "B", "C", "D", "E"}
+    assert {r[0] for r in conn.execute("SELECT DISTINCT family FROM markets")} == {"A", "B", "C", "D", "E", "F", "G", "H"}

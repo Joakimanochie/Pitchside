@@ -759,6 +759,279 @@
    "se": 0.0175,
    "tier": "Low"
   },
+  "cards_ah|0": {
+   "n": 52,
+   "skill": 0.232,
+   "gap": 0.0506,
+   "se": 0.0395,
+   "tier": "Low"
+  },
+  "cards_ah|1": {
+   "n": 3902,
+   "skill": 0.0148,
+   "gap": 0.0297,
+   "se": 0.0063,
+   "tier": "Low"
+  },
+  "cards_ah|2": {
+   "n": 5057,
+   "skill": 0.0176,
+   "gap": 0.0272,
+   "se": 0.0065,
+   "tier": "Medium"
+  },
+  "cards_ah|3": {
+   "n": 5978,
+   "skill": 0.0164,
+   "gap": 0.0,
+   "se": 0.0064,
+   "tier": "Medium"
+  },
+  "cards_ah|4": {
+   "n": 5057,
+   "skill": 0.0176,
+   "gap": -0.0272,
+   "se": 0.0065,
+   "tier": "Medium"
+  },
+  "cards_ah|5": {
+   "n": 3902,
+   "skill": 0.0148,
+   "gap": -0.0297,
+   "se": 0.0063,
+   "tier": "Low"
+  },
+  "cards_ah|6": {
+   "n": 52,
+   "skill": 0.232,
+   "gap": -0.0506,
+   "se": 0.0395,
+   "tier": "Low"
+  },
+  "cards_odd_even|3": {
+   "n": 6000,
+   "skill": 0.0,
+   "gap": 0.0,
+   "se": 0.0065,
+   "tier": "Low"
+  },
+  "cards_ou_away|0": {
+   "n": 1600,
+   "skill": 0.0655,
+   "gap": 0.0065,
+   "se": 0.0066,
+   "tier": "High"
+  },
+  "cards_ou_away|1": {
+   "n": 4244,
+   "skill": 0.026,
+   "gap": 0.0149,
+   "se": 0.0057,
+   "tier": "Medium"
+  },
+  "cards_ou_away|2": {
+   "n": 3993,
+   "skill": 0.0184,
+   "gap": 0.0103,
+   "se": 0.0074,
+   "tier": "Medium"
+  },
+  "cards_ou_away|3": {
+   "n": 4326,
+   "skill": 0.0364,
+   "gap": 0.0,
+   "se": 0.0075,
+   "tier": "Medium"
+  },
+  "cards_ou_away|4": {
+   "n": 3993,
+   "skill": 0.0184,
+   "gap": -0.0103,
+   "se": 0.0074,
+   "tier": "Medium"
+  },
+  "cards_ou_away|5": {
+   "n": 4244,
+   "skill": 0.026,
+   "gap": -0.0149,
+   "se": 0.0057,
+   "tier": "Medium"
+  },
+  "cards_ou_away|6": {
+   "n": 1600,
+   "skill": 0.0655,
+   "gap": -0.0065,
+   "se": 0.0066,
+   "tier": "High"
+  },
+  "cards_ou_home|0": {
+   "n": 1320,
+   "skill": 0.0662,
+   "gap": -0.0032,
+   "se": 0.0074,
+   "tier": "High"
+  },
+  "cards_ou_home|1": {
+   "n": 5143,
+   "skill": 0.0236,
+   "gap": 0.0026,
+   "se": 0.0051,
+   "tier": "Medium"
+  },
+  "cards_ou_home|2": {
+   "n": 3295,
+   "skill": 0.0246,
+   "gap": 0.0034,
+   "se": 0.0081,
+   "tier": "Medium"
+  },
+  "cards_ou_home|3": {
+   "n": 4484,
+   "skill": 0.0301,
+   "gap": 0.0,
+   "se": 0.0074,
+   "tier": "Medium"
+  },
+  "cards_ou_home|4": {
+   "n": 3295,
+   "skill": 0.0246,
+   "gap": -0.0034,
+   "se": 0.0081,
+   "tier": "Medium"
+  },
+  "cards_ou_home|5": {
+   "n": 5143,
+   "skill": 0.0236,
+   "gap": -0.0026,
+   "se": 0.0051,
+   "tier": "Medium"
+  },
+  "cards_ou_home|6": {
+   "n": 1320,
+   "skill": 0.0662,
+   "gap": 0.0032,
+   "se": 0.0074,
+   "tier": "High"
+  },
+  "cards_ou_total|0": {
+   "n": 3307,
+   "skill": 0.0475,
+   "gap": -0.0174,
+   "se": 0.0043,
+   "tier": "Medium"
+  },
+  "cards_ou_total|1": {
+   "n": 6440,
+   "skill": 0.0244,
+   "gap": -0.0123,
+   "se": 0.0047,
+   "tier": "Medium"
+  },
+  "cards_ou_total|2": {
+   "n": 5100,
+   "skill": 0.0326,
+   "gap": 0.0005,
+   "se": 0.0065,
+   "tier": "Medium"
+  },
+  "cards_ou_total|3": {
+   "n": 6306,
+   "skill": 0.0339,
+   "gap": 0.0,
+   "se": 0.0063,
+   "tier": "Medium"
+  },
+  "cards_ou_total|4": {
+   "n": 5100,
+   "skill": 0.0326,
+   "gap": -0.0005,
+   "se": 0.0065,
+   "tier": "Medium"
+  },
+  "cards_ou_total|5": {
+   "n": 6440,
+   "skill": 0.0244,
+   "gap": 0.0123,
+   "se": 0.0047,
+   "tier": "Medium"
+  },
+  "cards_ou_total|6": {
+   "n": 3307,
+   "skill": 0.0475,
+   "gap": 0.0174,
+   "se": 0.0043,
+   "tier": "Medium"
+  },
+  "cards_range|0": {
+   "n": 223,
+   "skill": 0.1629,
+   "gap": -0.0175,
+   "se": 0.0178,
+   "tier": "High"
+  },
+  "cards_range|1": {
+   "n": 2172,
+   "skill": 0.0291,
+   "gap": -0.0255,
+   "se": 0.0083,
+   "tier": "Medium"
+  },
+  "cards_range|2": {
+   "n": 4324,
+   "skill": 0.0105,
+   "gap": 0.0103,
+   "se": 0.0072,
+   "tier": "Low"
+  },
+  "cards_range|3": {
+   "n": 2011,
+   "skill": 0.014,
+   "gap": 0.0068,
+   "se": 0.011,
+   "tier": "Low"
+  },
+  "cards_range|4": {
+   "n": 244,
+   "skill": 0.1612,
+   "gap": -0.0156,
+   "se": 0.0304,
+   "tier": "High"
+  },
+  "cards_range|5": {
+   "n": 26,
+   "skill": -0.0229,
+   "gap": 0.1784,
+   "se": 0.0791,
+   "tier": "Low"
+  },
+  "cards_x12|1": {
+   "n": 3135,
+   "skill": -0.0011,
+   "gap": -0.0347,
+   "se": 0.0071,
+   "tier": "Low"
+  },
+  "cards_x12|2": {
+   "n": 2899,
+   "skill": 0.0156,
+   "gap": 0.0272,
+   "se": 0.0088,
+   "tier": "Medium"
+  },
+  "cards_x12|3": {
+   "n": 2911,
+   "skill": 0.0165,
+   "gap": 0.0095,
+   "se": 0.0092,
+   "tier": "Medium"
+  },
+  "cards_x12|4": {
+   "n": 55,
+   "skill": 0.0567,
+   "gap": 0.043,
+   "se": 0.0652,
+   "tier": "Low"
+  },
   "clean_sheet_away|0": {
    "n": 58,
    "skill": 0.3575,
@@ -995,6 +1268,293 @@
    "skill": 0.5477,
    "gap": -0.1668,
    "se": 0.0948,
+   "tier": "Low"
+  },
+  "corners_ah|0": {
+   "n": 3057,
+   "skill": 0.1829,
+   "gap": -0.0248,
+   "se": 0.0043,
+   "tier": "High"
+  },
+  "corners_ah|1": {
+   "n": 7919,
+   "skill": 0.056,
+   "gap": -0.0363,
+   "se": 0.0043,
+   "tier": "Medium"
+  },
+  "corners_ah|2": {
+   "n": 7926,
+   "skill": 0.0446,
+   "gap": -0.0266,
+   "se": 0.0052,
+   "tier": "Medium"
+  },
+  "corners_ah|3": {
+   "n": 10196,
+   "skill": 0.0501,
+   "gap": 0.0,
+   "se": 0.0049,
+   "tier": "High"
+  },
+  "corners_ah|4": {
+   "n": 7926,
+   "skill": 0.0446,
+   "gap": 0.0266,
+   "se": 0.0052,
+   "tier": "Medium"
+  },
+  "corners_ah|5": {
+   "n": 7919,
+   "skill": 0.056,
+   "gap": 0.0363,
+   "se": 0.0043,
+   "tier": "Medium"
+  },
+  "corners_ah|6": {
+   "n": 3057,
+   "skill": 0.1829,
+   "gap": 0.0248,
+   "se": 0.0043,
+   "tier": "High"
+  },
+  "corners_odd_even|3": {
+   "n": 6000,
+   "skill": -0.0001,
+   "gap": 0.0,
+   "se": 0.0065,
+   "tier": "Low"
+  },
+  "corners_ou_away|0": {
+   "n": 2292,
+   "skill": 0.1459,
+   "gap": -0.0024,
+   "se": 0.0051,
+   "tier": "High"
+  },
+  "corners_ou_away|1": {
+   "n": 6320,
+   "skill": 0.0404,
+   "gap": -0.0193,
+   "se": 0.0048,
+   "tier": "Medium"
+  },
+  "corners_ou_away|2": {
+   "n": 5789,
+   "skill": 0.0393,
+   "gap": -0.0101,
+   "se": 0.0061,
+   "tier": "Medium"
+  },
+  "corners_ou_away|3": {
+   "n": 7198,
+   "skill": 0.0344,
+   "gap": 0.0,
+   "se": 0.0059,
+   "tier": "Medium"
+  },
+  "corners_ou_away|4": {
+   "n": 5789,
+   "skill": 0.0393,
+   "gap": 0.0101,
+   "se": 0.0061,
+   "tier": "Medium"
+  },
+  "corners_ou_away|5": {
+   "n": 6320,
+   "skill": 0.0404,
+   "gap": 0.0193,
+   "se": 0.0048,
+   "tier": "Medium"
+  },
+  "corners_ou_away|6": {
+   "n": 2292,
+   "skill": 0.1459,
+   "gap": 0.0024,
+   "se": 0.0051,
+   "tier": "High"
+  },
+  "corners_ou_home|0": {
+   "n": 1280,
+   "skill": 0.2323,
+   "gap": 0.0003,
+   "se": 0.0072,
+   "tier": "High"
+  },
+  "corners_ou_home|1": {
+   "n": 6345,
+   "skill": 0.0592,
+   "gap": -0.0073,
+   "se": 0.0048,
+   "tier": "High"
+  },
+  "corners_ou_home|2": {
+   "n": 6357,
+   "skill": 0.043,
+   "gap": -0.0149,
+   "se": 0.0058,
+   "tier": "Medium"
+  },
+  "corners_ou_home|3": {
+   "n": 8036,
+   "skill": 0.0384,
+   "gap": 0.0,
+   "se": 0.0055,
+   "tier": "Medium"
+  },
+  "corners_ou_home|4": {
+   "n": 6357,
+   "skill": 0.043,
+   "gap": 0.0149,
+   "se": 0.0058,
+   "tier": "Medium"
+  },
+  "corners_ou_home|5": {
+   "n": 6345,
+   "skill": 0.0592,
+   "gap": 0.0073,
+   "se": 0.0048,
+   "tier": "High"
+  },
+  "corners_ou_home|6": {
+   "n": 1280,
+   "skill": 0.2323,
+   "gap": -0.0003,
+   "se": 0.0072,
+   "tier": "High"
+  },
+  "corners_ou_total|0": {
+   "n": 635,
+   "skill": 0.0888,
+   "gap": 0.0044,
+   "se": 0.0108,
+   "tier": "High"
+  },
+  "corners_ou_total|1": {
+   "n": 8826,
+   "skill": 0.0096,
+   "gap": 0.0139,
+   "se": 0.0041,
+   "tier": "Low"
+  },
+  "corners_ou_total|2": {
+   "n": 9077,
+   "skill": 0.0135,
+   "gap": 0.0171,
+   "se": 0.0049,
+   "tier": "Low"
+  },
+  "corners_ou_total|3": {
+   "n": 10924,
+   "skill": 0.0166,
+   "gap": 0.0,
+   "se": 0.0048,
+   "tier": "Medium"
+  },
+  "corners_ou_total|4": {
+   "n": 9077,
+   "skill": 0.0135,
+   "gap": -0.0171,
+   "se": 0.0049,
+   "tier": "Low"
+  },
+  "corners_ou_total|5": {
+   "n": 8826,
+   "skill": 0.0096,
+   "gap": -0.0139,
+   "se": 0.0041,
+   "tier": "Low"
+  },
+  "corners_ou_total|6": {
+   "n": 635,
+   "skill": 0.0888,
+   "gap": -0.0044,
+   "se": 0.0108,
+   "tier": "High"
+  },
+  "corners_range|0": {
+   "n": 1,
+   "skill": 0.6933,
+   "gap": 0.0957,
+   "se": 0.2942,
+   "tier": "Low"
+  },
+  "corners_range|1": {
+   "n": 1047,
+   "skill": 0.03,
+   "gap": -0.0059,
+   "se": 0.0125,
+   "tier": "Medium"
+  },
+  "corners_range|2": {
+   "n": 6174,
+   "skill": 0.005,
+   "gap": -0.0053,
+   "se": 0.0059,
+   "tier": "Low"
+  },
+  "corners_range|3": {
+   "n": 1741,
+   "skill": 0.0141,
+   "gap": 0.0255,
+   "se": 0.0119,
+   "tier": "Low"
+  },
+  "corners_range|4": {
+   "n": 37,
+   "skill": 0.3433,
+   "gap": -0.1573,
+   "se": 0.0794,
+   "tier": "Low"
+  },
+  "corners_x12|0": {
+   "n": 1016,
+   "skill": 0.0632,
+   "gap": 0.0015,
+   "se": 0.0087,
+   "tier": "High"
+  },
+  "corners_x12|1": {
+   "n": 2916,
+   "skill": 0.0528,
+   "gap": -0.0038,
+   "se": 0.0063,
+   "tier": "High"
+  },
+  "corners_x12|2": {
+   "n": 1579,
+   "skill": 0.0279,
+   "gap": -0.0229,
+   "se": 0.0118,
+   "tier": "Medium"
+  },
+  "corners_x12|3": {
+   "n": 2183,
+   "skill": 0.0186,
+   "gap": 0.0056,
+   "se": 0.0106,
+   "tier": "Medium"
+  },
+  "corners_x12|4": {
+   "n": 962,
+   "skill": 0.0655,
+   "gap": 0.0268,
+   "se": 0.0151,
+   "tier": "High"
+  },
+  "corners_x12|5": {
+   "n": 333,
+   "skill": 0.2179,
+   "gap": 0.0261,
+   "se": 0.0217,
+   "tier": "High"
+  },
+  "corners_x12|6": {
+   "n": 11,
+   "skill": 0.859,
+   "gap": -0.0836,
+   "se": 0.0834,
    "tier": "Low"
   },
   "correct_score|0": {
@@ -5680,6 +6240,496 @@
    "se": 0.082,
    "tier": "Low"
   },
+  "shots_ah|0": {
+   "n": 4991,
+   "skill": 0.3797,
+   "gap": -0.027,
+   "se": 0.0032,
+   "tier": "High"
+  },
+  "shots_ah|1": {
+   "n": 9135,
+   "skill": 0.1531,
+   "gap": -0.0337,
+   "se": 0.004,
+   "tier": "High"
+  },
+  "shots_ah|2": {
+   "n": 9508,
+   "skill": 0.0728,
+   "gap": -0.0236,
+   "se": 0.0048,
+   "tier": "High"
+  },
+  "shots_ah|3": {
+   "n": 12732,
+   "skill": 0.0533,
+   "gap": 0.0,
+   "se": 0.0044,
+   "tier": "High"
+  },
+  "shots_ah|4": {
+   "n": 9508,
+   "skill": 0.0728,
+   "gap": 0.0236,
+   "se": 0.0048,
+   "tier": "High"
+  },
+  "shots_ah|5": {
+   "n": 9135,
+   "skill": 0.1531,
+   "gap": 0.0337,
+   "se": 0.004,
+   "tier": "High"
+  },
+  "shots_ah|6": {
+   "n": 4991,
+   "skill": 0.3797,
+   "gap": 0.027,
+   "se": 0.0032,
+   "tier": "High"
+  },
+  "shots_ou_away|0": {
+   "n": 2693,
+   "skill": 0.2405,
+   "gap": -0.015,
+   "se": 0.0044,
+   "tier": "High"
+  },
+  "shots_ou_away|1": {
+   "n": 4773,
+   "skill": 0.0995,
+   "gap": -0.016,
+   "se": 0.0055,
+   "tier": "High"
+  },
+  "shots_ou_away|2": {
+   "n": 4554,
+   "skill": 0.0711,
+   "gap": -0.0065,
+   "se": 0.0069,
+   "tier": "High"
+  },
+  "shots_ou_away|3": {
+   "n": 5960,
+   "skill": 0.0644,
+   "gap": 0.0,
+   "se": 0.0064,
+   "tier": "High"
+  },
+  "shots_ou_away|4": {
+   "n": 4554,
+   "skill": 0.0711,
+   "gap": 0.0065,
+   "se": 0.0069,
+   "tier": "High"
+  },
+  "shots_ou_away|5": {
+   "n": 4773,
+   "skill": 0.0995,
+   "gap": 0.016,
+   "se": 0.0055,
+   "tier": "High"
+  },
+  "shots_ou_away|6": {
+   "n": 2693,
+   "skill": 0.2405,
+   "gap": 0.015,
+   "se": 0.0044,
+   "tier": "High"
+  },
+  "shots_ou_home|0": {
+   "n": 2041,
+   "skill": 0.3383,
+   "gap": -0.0018,
+   "se": 0.0053,
+   "tier": "High"
+  },
+  "shots_ou_home|1": {
+   "n": 4897,
+   "skill": 0.1046,
+   "gap": -0.0117,
+   "se": 0.0054,
+   "tier": "High"
+  },
+  "shots_ou_home|2": {
+   "n": 4894,
+   "skill": 0.0767,
+   "gap": -0.0048,
+   "se": 0.0067,
+   "tier": "High"
+  },
+  "shots_ou_home|3": {
+   "n": 6336,
+   "skill": 0.0601,
+   "gap": 0.0,
+   "se": 0.0062,
+   "tier": "High"
+  },
+  "shots_ou_home|4": {
+   "n": 4894,
+   "skill": 0.0767,
+   "gap": 0.0048,
+   "se": 0.0067,
+   "tier": "High"
+  },
+  "shots_ou_home|5": {
+   "n": 4897,
+   "skill": 0.1046,
+   "gap": 0.0117,
+   "se": 0.0054,
+   "tier": "High"
+  },
+  "shots_ou_home|6": {
+   "n": 2041,
+   "skill": 0.3383,
+   "gap": 0.0018,
+   "se": 0.0053,
+   "tier": "High"
+  },
+  "shots_ou_total|0": {
+   "n": 671,
+   "skill": 0.1499,
+   "gap": -0.0153,
+   "se": 0.0102,
+   "tier": "High"
+  },
+  "shots_ou_total|1": {
+   "n": 5470,
+   "skill": 0.0422,
+   "gap": 0.0069,
+   "se": 0.0052,
+   "tier": "Medium"
+  },
+  "shots_ou_total|2": {
+   "n": 7237,
+   "skill": 0.029,
+   "gap": 0.0147,
+   "se": 0.0055,
+   "tier": "Medium"
+  },
+  "shots_ou_total|3": {
+   "n": 9244,
+   "skill": 0.0183,
+   "gap": 0.0,
+   "se": 0.0052,
+   "tier": "Medium"
+  },
+  "shots_ou_total|4": {
+   "n": 7237,
+   "skill": 0.029,
+   "gap": -0.0147,
+   "se": 0.0055,
+   "tier": "Medium"
+  },
+  "shots_ou_total|5": {
+   "n": 5470,
+   "skill": 0.0422,
+   "gap": -0.0069,
+   "se": 0.0052,
+   "tier": "Medium"
+  },
+  "shots_ou_total|6": {
+   "n": 671,
+   "skill": 0.1499,
+   "gap": 0.0153,
+   "se": 0.0102,
+   "tier": "High"
+  },
+  "shots_x12|0": {
+   "n": 3390,
+   "skill": 0.1249,
+   "gap": -0.0001,
+   "se": 0.0039,
+   "tier": "High"
+  },
+  "shots_x12|1": {
+   "n": 977,
+   "skill": 0.1542,
+   "gap": -0.0397,
+   "se": 0.0122,
+   "tier": "High"
+  },
+  "shots_x12|2": {
+   "n": 1125,
+   "skill": 0.0531,
+   "gap": -0.0206,
+   "se": 0.0139,
+   "tier": "High"
+  },
+  "shots_x12|3": {
+   "n": 1509,
+   "skill": 0.0377,
+   "gap": 0.002,
+   "se": 0.0128,
+   "tier": "Medium"
+  },
+  "shots_x12|4": {
+   "n": 1008,
+   "skill": 0.0802,
+   "gap": 0.0158,
+   "se": 0.0147,
+   "tier": "High"
+  },
+  "shots_x12|5": {
+   "n": 747,
+   "skill": 0.1953,
+   "gap": 0.0461,
+   "se": 0.0139,
+   "tier": "Medium"
+  },
+  "shots_x12|6": {
+   "n": 244,
+   "skill": 0.4807,
+   "gap": 0.0362,
+   "se": 0.0154,
+   "tier": "High"
+  },
+  "sot_ah|0": {
+   "n": 2180,
+   "skill": 0.4026,
+   "gap": 0.0076,
+   "se": 0.0051,
+   "tier": "High"
+  },
+  "sot_ah|1": {
+   "n": 5666,
+   "skill": 0.1461,
+   "gap": 0.0035,
+   "se": 0.005,
+   "tier": "High"
+  },
+  "sot_ah|2": {
+   "n": 6061,
+   "skill": 0.0822,
+   "gap": 0.0,
+   "se": 0.006,
+   "tier": "High"
+  },
+  "sot_ah|3": {
+   "n": 8186,
+   "skill": 0.0783,
+   "gap": 0.0,
+   "se": 0.0055,
+   "tier": "High"
+  },
+  "sot_ah|4": {
+   "n": 6061,
+   "skill": 0.0822,
+   "gap": -0.0,
+   "se": 0.006,
+   "tier": "High"
+  },
+  "sot_ah|5": {
+   "n": 5666,
+   "skill": 0.1461,
+   "gap": -0.0035,
+   "se": 0.005,
+   "tier": "High"
+  },
+  "sot_ah|6": {
+   "n": 2180,
+   "skill": 0.4026,
+   "gap": -0.0076,
+   "se": 0.0051,
+   "tier": "High"
+  },
+  "sot_ou_away|0": {
+   "n": 2000,
+   "skill": 0.2057,
+   "gap": -0.0002,
+   "se": 0.0054,
+   "tier": "High"
+  },
+  "sot_ou_away|1": {
+   "n": 4973,
+   "skill": 0.07,
+   "gap": -0.0013,
+   "se": 0.0054,
+   "tier": "High"
+  },
+  "sot_ou_away|2": {
+   "n": 4925,
+   "skill": 0.0571,
+   "gap": 0.0014,
+   "se": 0.0066,
+   "tier": "High"
+  },
+  "sot_ou_away|3": {
+   "n": 6204,
+   "skill": 0.0652,
+   "gap": 0.0,
+   "se": 0.0063,
+   "tier": "High"
+  },
+  "sot_ou_away|4": {
+   "n": 4925,
+   "skill": 0.0571,
+   "gap": -0.0014,
+   "se": 0.0066,
+   "tier": "High"
+  },
+  "sot_ou_away|5": {
+   "n": 4973,
+   "skill": 0.07,
+   "gap": 0.0013,
+   "se": 0.0054,
+   "tier": "High"
+  },
+  "sot_ou_away|6": {
+   "n": 2000,
+   "skill": 0.2057,
+   "gap": 0.0002,
+   "se": 0.0054,
+   "tier": "High"
+  },
+  "sot_ou_home|0": {
+   "n": 1353,
+   "skill": 0.2776,
+   "gap": -0.0004,
+   "se": 0.0068,
+   "tier": "High"
+  },
+  "sot_ou_home|1": {
+   "n": 5145,
+   "skill": 0.0991,
+   "gap": 0.0036,
+   "se": 0.0053,
+   "tier": "High"
+  },
+  "sot_ou_home|2": {
+   "n": 5216,
+   "skill": 0.069,
+   "gap": 0.0063,
+   "se": 0.0065,
+   "tier": "High"
+  },
+  "sot_ou_home|3": {
+   "n": 6572,
+   "skill": 0.066,
+   "gap": 0.0,
+   "se": 0.0061,
+   "tier": "High"
+  },
+  "sot_ou_home|4": {
+   "n": 5216,
+   "skill": 0.069,
+   "gap": -0.0063,
+   "se": 0.0065,
+   "tier": "High"
+  },
+  "sot_ou_home|5": {
+   "n": 5145,
+   "skill": 0.0991,
+   "gap": -0.0036,
+   "se": 0.0053,
+   "tier": "High"
+  },
+  "sot_ou_home|6": {
+   "n": 1353,
+   "skill": 0.2776,
+   "gap": 0.0004,
+   "se": 0.0068,
+   "tier": "High"
+  },
+  "sot_ou_total|0": {
+   "n": 1092,
+   "skill": 0.098,
+   "gap": -0.0094,
+   "se": 0.008,
+   "tier": "High"
+  },
+  "sot_ou_total|1": {
+   "n": 7678,
+   "skill": 0.0292,
+   "gap": 0.0016,
+   "se": 0.0043,
+   "tier": "Medium"
+  },
+  "sot_ou_total|2": {
+   "n": 7521,
+   "skill": 0.0274,
+   "gap": -0.0045,
+   "se": 0.0054,
+   "tier": "Medium"
+  },
+  "sot_ou_total|3": {
+   "n": 9418,
+   "skill": 0.0211,
+   "gap": 0.0,
+   "se": 0.0051,
+   "tier": "Medium"
+  },
+  "sot_ou_total|4": {
+   "n": 7521,
+   "skill": 0.0274,
+   "gap": 0.0045,
+   "se": 0.0054,
+   "tier": "Medium"
+  },
+  "sot_ou_total|5": {
+   "n": 7678,
+   "skill": 0.0292,
+   "gap": -0.0016,
+   "se": 0.0043,
+   "tier": "Medium"
+  },
+  "sot_ou_total|6": {
+   "n": 1092,
+   "skill": 0.098,
+   "gap": 0.0094,
+   "se": 0.008,
+   "tier": "High"
+  },
+  "sot_x12|0": {
+   "n": 803,
+   "skill": 0.2231,
+   "gap": 0.0062,
+   "se": 0.0093,
+   "tier": "High"
+  },
+  "sot_x12|1": {
+   "n": 3375,
+   "skill": 0.077,
+   "gap": 0.0014,
+   "se": 0.006,
+   "tier": "High"
+  },
+  "sot_x12|2": {
+   "n": 1488,
+   "skill": 0.062,
+   "gap": 0.0144,
+   "se": 0.0121,
+   "tier": "High"
+  },
+  "sot_x12|3": {
+   "n": 1905,
+   "skill": 0.0437,
+   "gap": -0.014,
+   "se": 0.0114,
+   "tier": "Medium"
+  },
+  "sot_x12|4": {
+   "n": 947,
+   "skill": 0.111,
+   "gap": 0.0007,
+   "se": 0.0153,
+   "tier": "High"
+  },
+  "sot_x12|5": {
+   "n": 439,
+   "skill": 0.3046,
+   "gap": -0.0068,
+   "se": 0.0187,
+   "tier": "High"
+  },
+  "sot_x12|6": {
+   "n": 43,
+   "skill": 0.765,
+   "gap": -0.0491,
+   "se": 0.0394,
+   "tier": "Low"
+  },
   "teams_to_score|0": {
    "n": 1647,
    "skill": 0.0786,
@@ -7186,40 +8236,187 @@
    "gap": 0.0045,
    "se": 0.02,
    "tier": "Low"
+  },
+  "F|0": {
+   "n": 8281,
+   "skill": 0.1615,
+   "gap": -0.0092,
+   "se": 0.0028,
+   "tier": "High"
+  },
+  "F|1": {
+   "n": 33373,
+   "skill": 0.0412,
+   "gap": -0.0105,
+   "se": 0.0021,
+   "tier": "Medium"
+  },
+  "F|2": {
+   "n": 36902,
+   "skill": 0.029,
+   "gap": -0.0075,
+   "se": 0.0024,
+   "tier": "Medium"
+  },
+  "F|3": {
+   "n": 46278,
+   "skill": 0.0286,
+   "gap": 0.0012,
+   "se": 0.0023,
+   "tier": "Medium"
+  },
+  "F|4": {
+   "n": 30148,
+   "skill": 0.0356,
+   "gap": 0.0076,
+   "se": 0.0027,
+   "tier": "Medium"
+  },
+  "F|5": {
+   "n": 29743,
+   "skill": 0.0433,
+   "gap": 0.0115,
+   "se": 0.0022,
+   "tier": "Medium"
+  },
+  "F|6": {
+   "n": 7275,
+   "skill": 0.1761,
+   "gap": 0.0106,
+   "se": 0.0029,
+   "tier": "High"
+  },
+  "G|0": {
+   "n": 6502,
+   "skill": 0.0616,
+   "gap": -0.0081,
+   "se": 0.0032,
+   "tier": "High"
+  },
+  "G|1": {
+   "n": 25036,
+   "skill": 0.0199,
+   "gap": -0.002,
+   "se": 0.0024,
+   "tier": "Medium"
+  },
+  "G|2": {
+   "n": 24668,
+   "skill": 0.0204,
+   "gap": 0.0128,
+   "se": 0.003,
+   "tier": "Medium"
+  },
+  "G|3": {
+   "n": 32016,
+   "skill": 0.0214,
+   "gap": 0.0013,
+   "se": 0.0028,
+   "tier": "Medium"
+  },
+  "G|4": {
+   "n": 17744,
+   "skill": 0.026,
+   "gap": -0.0109,
+   "se": 0.0035,
+   "tier": "Medium"
+  },
+  "G|5": {
+   "n": 19755,
+   "skill": 0.0226,
+   "gap": -0.0055,
+   "se": 0.0027,
+   "tier": "Medium"
+  },
+  "G|6": {
+   "n": 6279,
+   "skill": 0.057,
+   "gap": 0.0078,
+   "se": 0.0032,
+   "tier": "High"
+  },
+  "H|0": {
+   "n": 21214,
+   "skill": 0.2855,
+   "gap": -0.0085,
+   "se": 0.0016,
+   "tier": "High"
+  },
+  "H|1": {
+   "n": 52089,
+   "skill": 0.0983,
+   "gap": -0.0075,
+   "se": 0.0017,
+   "tier": "High"
+  },
+  "H|2": {
+   "n": 52529,
+   "skill": 0.0596,
+   "gap": -0.0032,
+   "se": 0.002,
+   "tier": "High"
+  },
+  "H|3": {
+   "n": 68066,
+   "skill": 0.0509,
+   "gap": -0.0003,
+   "se": 0.0019,
+   "tier": "High"
+  },
+  "H|4": {
+   "n": 51871,
+   "skill": 0.0611,
+   "gap": 0.0035,
+   "se": 0.002,
+   "tier": "High"
+  },
+  "H|5": {
+   "n": 48923,
+   "skill": 0.1024,
+   "gap": 0.008,
+   "se": 0.0017,
+   "tier": "High"
+  },
+  "H|6": {
+   "n": 17308,
+   "skill": 0.3148,
+   "gap": 0.011,
+   "se": 0.0018,
+   "tier": "High"
   }
  },
  "validation": {
-  "fitted_on_matches": 828,
-  "checked_on_matches": 572,
-  "until": "2026-02-28",
+  "fitted_on_matches": 3208,
+  "checked_on_matches": 1192,
+  "until": "2026-01-24",
   "tiers": [
    {
     "tier": "High",
-    "share": 0.206,
-    "predicted": 0.4071,
-    "happened": 0.4076,
-    "skill": 0.0723
+    "share": 0.2191,
+    "predicted": 0.4304,
+    "happened": 0.4307,
+    "skill": 0.0832
    },
    {
     "tier": "Medium",
-    "share": 0.3917,
-    "predicted": 0.2226,
-    "happened": 0.2236,
-    "skill": 0.0331
+    "share": 0.4183,
+    "predicted": 0.2708,
+    "happened": 0.2709,
+    "skill": 0.0349
    },
    {
     "tier": "Low",
-    "share": 0.4023,
-    "predicted": 0.4135,
-    "happened": 0.4121,
-    "skill": 0.0122
+    "share": 0.3626,
+    "predicted": 0.4081,
+    "happened": 0.4078,
+    "skill": 0.012
    }
   ]
  },
  "backtest": {
-  "matches": 1400,
-  "from": "2025-08-15",
+  "matches": 4400,
+  "from": "2022-08-05",
   "to": "2026-10-12",
-  "selections": 1323000
+  "selections": 1959000
  }
 }

@@ -228,3 +228,23 @@ low-score correction still on real goals (`xg_weight` in `DixonColes`). Tuned on
 Weight 0.5 was best on the tuning seasons for 1X2 and over/under (0.25 and 0.75 were close; 1.0 was worse than goals alone). The gains are positive on all three markets but small (0.04% on the match
 result, about 0.1% on both teams to score), well below the gap to the bookmakers. Shipping it would need a daily xG feed, a new model version and a full rebuild of the confidence ratings, so it is left
 in the code, tested and switched off. Where it should matter more is clubs with little history (promoted sides), which is the next thing to test.
+
+## Corners, cards, shots and shots on target (Phase 3, `scripts/tune_counts.py`, `scripts/backtest_counts.py`)
+
+Each statistic has its own count model: attack and defence rates per club with a home advantage, older matches counting less, and a negative binomial spread estimated from the data
+(`src/pitchside/models/counts.py`). Memory and shrinkage were chosen on 2019/20-2021/22 only (a 365-day half-life and shrinkage 16 for all four; heavier shrinkage than goals,
+because these counts are noisier per club), then frozen. Priced markets: over/under for the match and each team, which team has more, a handicap, and odd/even and ranges for corners and cards.
+
+Held-out 2022/23 to 2026/27, 3,000 random matches, later half scored against how often each selection usually happens (log loss; positive skill is better):
+
+| Statistic | Skill over the usual frequency |
+|---|---|
+| Corners | +3.6% |
+| Cards (yellow plus red) | +2.6% |
+| Shots | +9.3% |
+| Shots on target | +7.4% |
+
+Calibration is close in every probability band for cards and shots on target; corners and shots are slightly overconfident in the tails (a prediction of about 85% happened about 83%),
+which the confidence ratings pick up. Highest skill is on team counts and handicaps (shots handicap +12.8%); odd/even markets carry no information (+0.0% to +0.1%) and are rated Low. Corners over/under on the
+match total is the weakest of the main markets (+1.6%). Confidence ratings for families F to H come from the same rule as the others and held out in the same order
+(High 8.3%, Medium 3.5%, Low 1.2% overall; in each of F, G and H High beat Medium beat Low).

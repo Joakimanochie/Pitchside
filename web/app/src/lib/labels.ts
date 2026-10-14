@@ -7,7 +7,10 @@ export const TABS = [
 	{ id: 'halves', label: 'Halves' },
 	{ id: 'flow', label: 'Game flow' },
 	{ id: 'minutes', label: 'Minutes' },
-	{ id: 'combos', label: 'Combos' }
+	{ id: 'combos', label: 'Combos' },
+	{ id: 'corners', label: 'Corners' },
+	{ id: 'cards', label: 'Cards' },
+	{ id: 'shots', label: 'Shots' }
 ] as const;
 export type TabId = (typeof TABS)[number]['id'];
 
@@ -56,7 +59,7 @@ function partLabel(part: string, mid: string, ctx: Ctx): string {
 export function selectionLabel(mid: string, lineKey: string, sel: string, ctx: Ctx): string {
 	const line = lineKey === 'null' ? null : Number(lineKey);
 	const { home, away } = ctx;
-	if (mid.startsWith('asian_handicap') && line != null) return sel === 'home' ? `${home} ${signed(line)}` : `${away} ${signed(-line)}`;
+	if ((mid.startsWith('asian_handicap') || mid.endsWith('_ah')) && line != null) return sel === 'home' ? `${home} ${signed(line)}` : `${away} ${signed(-line)}`;
 	if (mid.startsWith('handicap_3way') && line != null) return `${tokenLabel(sel, mid, ctx)} (${line < 0 ? `0:${-line}` : `${line}:0`})`;
 	if ((sel === 'over' || sel === 'under') && line != null) return `${sel === 'over' ? 'Over' : 'Under'} ${line}`;
 	if (mid === 'first_goal_10' || mid === 'first_goal_15') return sel === 'none' ? 'No goal' : `${sel} min`;
@@ -78,7 +81,7 @@ export function selectionLabel(mid: string, lineKey: string, sel: string, ctx: C
 export function lineChipLabel(mid: string, lineKey: string): string {
 	const n = Number(lineKey);
 	if (mid.startsWith('handicap_3way')) return n < 0 ? `0:${-n}` : `${n}:0`;
-	if (mid.startsWith('asian_handicap')) return signed(n);
+	if (mid.startsWith('asian_handicap') || mid.endsWith('_ah')) return signed(n);
 	if (mid.startsWith('lead_by')) return `${n}+ goal${n > 1 ? 's' : ''}`;
 	if (mid.startsWith('goals_in_a_row')) return `${n}+ in a row`;
 	return String(n);
@@ -103,7 +106,7 @@ export function matchesQuery(title: string, query: string): boolean {
 
 export function tabOf(mid: string, meta: MarketMeta): TabId {
 	if (meta.family === 'A') return MAIN_IDS.has(mid) ? 'main' : 'goals';
-	return ({ B: 'halves', C: 'flow', D: 'minutes', E: 'combos' } as const)[meta.family];
+	return ({ B: 'halves', C: 'flow', D: 'minutes', E: 'combos', F: 'corners', G: 'cards', H: 'shots' } as const)[meta.family];
 }
 
 /** The line a card opens on: prefer a half line, then the one closest to a coin flip. */

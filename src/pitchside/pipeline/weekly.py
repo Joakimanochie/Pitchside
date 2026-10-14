@@ -26,8 +26,12 @@ from pitchside.ingest.fixtures import fetch_fixtures, upsert_fixtures
 from pitchside.ingest.footballdata import current_season, load_seasons
 from pitchside.ingest.load_matches import load_footballdata
 from pitchside.leagues import LEAGUES
+from pitchside.markets.base import price as price_market
+from pitchside.markets.counts import MARKETS as COUNT_MARKETS
+from pitchside.markets.counts import STATS as COUNT_STATS
 from pitchside.markets.goals import price_match
 from pitchside.markets.registry import MARKETS
+from pitchside.models.counts import COUNT_PARAMS, CountModel
 from pitchside.models.dixon_coles import DixonColes
 from pitchside.odds.footballdata_fixtures import FootballDataFixtures
 from pitchside.odds.store import store_odds
@@ -38,6 +42,8 @@ from pitchside.sim.pricing import price_all
 
 MODEL_VERSION = "goals-dc-0.3.0"   # 0.1.0 priced family A only; 0.2.0 adds the half/goal-timing simulator (B-E); 0.3.0 follows the recent scoring level and compresses totals
 FEATURE_VERSION = "scores-only-v1"
+COUNT_MODEL_VERSION = "counts-nb-0.1.0"   # corners, cards, shots and shots on target: its own model line, so adding it never reopens goals predictions
+COUNT_FEATURE_VERSION = "team-stats-v1"
 MODEL_PARAMS = {"half_life_days": 730, "ridge": 2.0, "level_window_days": 240, "level_shrink": 60, "total_compression": 0.7, "max_goals": 10, "n_sims": 50_000, "split": "empirical-table", "timing": "pooled-profile"}
 N_SIMS = 50_000
 def make_model() -> DixonColes:
@@ -137,6 +143,60 @@ def predict_week(conn: psycopg.Connection, league_id: str, as_of: date, days: in
     return {"run_id": run_id, "matches": len(fixtures), "predictions": total, "families": families}
 
 
+def load_count_history(conn: psycopg.Connection, league_id: str) -> pd.DataFrame:
+    """Finished matches with both teams' corners, cards (yellow plus red), shots and shots on target."""
+    rows = conn.execute(
+        "SELECT m.match_date, th.canonical_name, ta.canonical_name, hs.corners, a_s.corners, hs.yellow_cards + hs.red_cards, a_s.yellow_cards + a_s.red_cards, "
+        "hs.shots, a_s.shots, hs.shots_on_target, a_s.shots_on_target "
+        "FROM matches m JOIN teams th ON th.id = m.home_team_id JOIN teams ta ON ta.id = m.away_team_id "
+        "JOIN team_match_stats hs ON hs.match_id = m.id AND hs.is_home JOIN team_match_stats a_s ON a_s.match_id = m.id AND NOT a_s.is_home "
+        "WHERE m.league_id = %s AND m.status = 'finished' ORDER BY m.match_date", (league_id,)).fetchall()
+    cols = ["match_date", "home", "away", "corners_h", "corners_a", "cards_h", "cards_a", "shots_h", "shots_a", "sot_h", "sot_a"]
+    return pd.DataFrame(rows, columns=cols).astype({c: float for c in cols[3:]})
+
+
+def predict_counts(conn: psycopg.Connection, league_id: str, as_of: date, days: int, force: bool = False) -> dict:
+    """Price corners, cards, shots and shots-on-target markets for fixtures in the next `days` days, one run per match per count-model version."""
+    now = datetime.now(UTC)
+    not_yet = "" if force else ("AND NOT EXISTS (SELECT 1 FROM predictions p JOIN prediction_runs r ON r.id = p.run_id "
+                                "WHERE p.match_id = m.id AND r.run_type = 'weekly' AND r.model_version_id = %s) ")
+    params = [league_id, as_of, as_of + timedelta(days=days), now] + ([] if force else [COUNT_MODEL_VERSION])
+    fixtures = conn.execute(
+        "SELECT m.id, m.kickoff, th.canonical_name, ta.canonical_name FROM matches m "
+        "JOIN teams th ON th.id = m.home_team_id JOIN teams ta ON ta.id = m.away_team_id "
+        "WHERE m.league_id = %s AND m.status = 'scheduled' AND m.match_date >= %s AND m.match_date < %s "
+        "AND (m.kickoff IS NULL OR m.kickoff > %s) " + not_yet + "ORDER BY m.kickoff, m.id", params).fetchall()
+    if not fixtures:
+        return {"run_id": None, "matches": 0, "predictions": 0, "note": "no upcoming fixtures in the window"}
+    history = load_count_history(conn, league_id)
+    if len(history) < MIN_HISTORY_MATCHES:
+        raise InsufficientHistoryError(f"{league_id}: only {len(history)} matches with team statistics, need at least {MIN_HISTORY_MATCHES}")
+    models = {}
+    for stat, cfg in COUNT_STATS.items():
+        data = history.assign(count_home=history[f"{stat}_h"], count_away=history[f"{stat}_a"])
+        models[stat] = CountModel(half_life_days=COUNT_PARAMS[stat]["half_life_days"], ridge=COUNT_PARAMS[stat]["ridge"], max_count=cfg["max"]).fit(data, as_of=as_of)
+    seed_markets(conn)
+    ensure_model_version(conn, COUNT_MODEL_VERSION, "Negative binomial count model per statistic: corners, cards, shots, shots on target",
+                         {"stats": list(COUNT_STATS), **{s: COUNT_PARAMS[s] for s in COUNT_STATS}})
+    cutoff = datetime.combine(as_of, time.min, tzinfo=UTC)
+    run_id = create_run(conn, "weekly", COUNT_MODEL_VERSION, COUNT_FEATURE_VERSION, cutoff,
+                        notes=f"{league_id}, {len(fixtures)} fixtures, window {as_of} + {days} days, counts")
+    total = 0
+    for match_id, kickoff, home, away in fixtures:
+        rows, context = [], {"kickoff": kickoff.isoformat() if kickoff else None, "matches_used": models["corners"].n_matches}
+        for stat, model in models.items():
+            matrix = model.count_matrix(home, away)
+            for market in (m for m in COUNT_MARKETS.values() if m.stat == stat):
+                for line in market.lines if market.has_line else (None,):
+                    rows.extend(price_market(market, line, matrix))
+            mh, ma = model.means(home, away)
+            context[stat] = {"mean_home": round(mh, 2), "mean_away": round(ma, 2), "dispersion": round(model.dispersion, 3)}
+        total += write_predictions(conn, run_id, match_id, rows, MARKETS, {})
+        write_context(conn, run_id, match_id, context)
+    conn.commit()
+    return {"run_id": run_id, "matches": len(fixtures), "predictions": total}
+
+
 def ingest_odds(conn: psycopg.Connection) -> dict:
     """Snapshot the pre-match bookmaker prices published for the coming fixtures (comparison only; never a model input)."""
     result = store_odds(conn, FootballDataFixtures())
@@ -176,6 +236,7 @@ def run_leagues(conn: psycopg.Connection, league_ids: list[str], days: int = 8, 
     for lid in league_ids:
         attempt(lid, "fixtures", plan_fixtures, conn, lid, today, days)
         attempt(lid, "predictions", predict_week, conn, lid, today, days, force)
+        attempt(lid, "counts", predict_counts, conn, lid, today, days, force)
     attempt("odds", "all", ingest_odds, conn)  # after fixtures exist, so the prices find their matches; one file covers every league
     return report, errors
 

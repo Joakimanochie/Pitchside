@@ -5,7 +5,7 @@ export type LinesMap = Record<string, Sel[]>;
 
 export interface MarketMeta {
 	name: string;
-	family: 'A' | 'B' | 'C' | 'D' | 'E';
+	family: 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H';
 	exclusive: boolean;
 	order: number;
 }

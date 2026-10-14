@@ -26,6 +26,7 @@ import psycopg
 
 from pitchside.db.migrate import _load_env
 from pitchside.markets.base import settle as settle_market
+from pitchside.markets.counts import stat_value
 from pitchside.markets.record_base import RecordMarket, settle_record
 from pitchside.markets.registry import MARKETS
 from pitchside.sim.record import MatchRecord, from_goals, from_scores
@@ -96,7 +97,12 @@ def _decide(row, records: dict) -> tuple[str, float | None, dict]:
     observed = {"ft_home": record["ft_home"], "ft_away": record["ft_away"]}
     coverage = coverage or {}
     try:
-        if isinstance(market, RecordMarket):
+        if getattr(market, "stat", None):   # corners, cards, shots: settled from the real team statistics, never from goals
+            home_n, away_n = stat_value(market.stat, record.get("home_stats")), stat_value(market.stat, record.get("away_stats"))
+            if home_n is None or away_n is None:
+                return "not_scorable", None, {"reason": "team_stats_missing", **observed}
+            res = settle_market(market, None if line is None else float(line), selection, int(home_n), int(away_n))
+        elif isinstance(market, RecordMarket):
             if market.needs_minutes and not coverage.get("goal_minutes"):
                 return "not_scorable", None, {"reason": "goal_minutes_unverified", **observed}
             if record["ht_home"] is None or record["ht_away"] is None:

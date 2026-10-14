@@ -105,12 +105,24 @@ def live_record(conn: psycopg.Connection, version: str) -> dict:
             "selections": sum(f["n"] for f in fams), "waiting_minutes": int(waiting)}
 
 
+def with_counts(val: dict) -> dict:
+    """Add the held-out results of the corners, cards and shots markets (scripts/backtest_counts.py) to the families table."""
+    path = PROCESSED / "count_validation.json"
+    if path.exists():
+        extra = json.loads(path.read_text(encoding="utf-8"))
+        val = {**val, "families": [*val["families"], *extra["families"]], "count_matches": extra["matches"]}
+    return val
+
+
 def build_snapshot(conn: psycopg.Connection) -> dict:
     """Everything the screens need, from SELECTs only: upcoming matches with every stored prediction (and its confidence tier),
     the live record, and the validation numbers."""
     order = {mid: i for i, mid in enumerate(MARKETS)}
     rules = load_rules()
-    version = conn.execute("SELECT model_version_id FROM prediction_runs WHERE run_type = 'weekly' ORDER BY created_at DESC LIMIT 1").fetchone()[0]
+    version = conn.execute("SELECT model_version_id FROM prediction_runs WHERE run_type = 'weekly' AND model_version_id LIKE 'goals-%' ORDER BY created_at DESC LIMIT 1").fetchone()[0]
+    # the count models (corners, cards, shots) are their own model line; predictions from the newest of each line are shown together
+    counts = conn.execute("SELECT model_version_id FROM prediction_runs WHERE run_type = 'weekly' AND model_version_id LIKE 'counts-%' ORDER BY created_at DESC LIMIT 1").fetchone()
+    versions = [version] + ([counts[0]] if counts else [])
     matches = conn.execute(
         "SELECT DISTINCT m.id, m.league_id, m.kickoff, th.canonical_name, ta.canonical_name, m.home_team_id, m.away_team_id FROM predictions p "
         "JOIN prediction_runs r ON r.id = p.run_id JOIN matches m ON m.id = p.match_id "
@@ -123,8 +135,8 @@ def build_snapshot(conn: psycopg.Connection) -> dict:
     preds: dict = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
     for mid, market_id, line, sel, prob, pick in conn.execute(
             "SELECT p.match_id, p.market_id, p.line, p.selection, p.probability, p.is_pick FROM predictions p "
-            "JOIN prediction_runs r ON r.id = p.run_id WHERE r.model_version_id = %s AND r.run_type = 'weekly' "
-            "AND p.match_id = ANY(%s) ORDER BY p.id", (version, ids)):
+            "JOIN prediction_runs r ON r.id = p.run_id WHERE r.model_version_id = ANY(%s) AND r.run_type = 'weekly' "
+            "AND p.match_id = ANY(%s) ORDER BY p.id", (versions, ids)):
         tier = TIERS.index(tier_for(rules, market_id, MARKETS[market_id].family, float(prob))) if market_id in MARKETS else 2
         preds[mid][market_id]["null" if line is None else str(float(line))].append([sel, round(float(prob), 4), 1 if pick else 0, tier])
 
@@ -142,8 +154,8 @@ def build_snapshot(conn: psycopg.Connection) -> dict:
         fixtures.append({"id": mid, "league": league, "kickoff": kickoff.astimezone(UTC).isoformat(), "home": home, "away": away,
                          "p": x12, "ctx": ctx.get(mid, {}), "home_id": home_id, "away_id": away_id})
     return {
-        "generated_at": datetime.now(UTC).isoformat(timespec="seconds"), "model_version": version,
+        "generated_at": datetime.now(UTC).isoformat(timespec="seconds"), "model_version": version, "count_model_version": counts[0] if counts else None,
         "leagues": {lid: lg.name for lid, lg in LEAGUES.items()}, "markets": markets, "fixtures": fixtures,
-        "preds": {str(mid): preds[mid] for mid in ids}, "validation": validation_cached(), "live": live,
+        "preds": {str(mid): preds[mid] for mid in ids}, "validation": with_counts(validation_cached()), "live": live,
         "confidence": {"labels": list(TIERS), "validation": rules.get("validation"), "backtest": rules.get("backtest")},
     }

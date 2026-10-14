@@ -21,6 +21,8 @@ Builder: HEO. Executor: Claude Code. Read `CLAUDE.md` first for the gstack setup
 
 - Expected-goals signal (2026-10-14): ratings fitted to goals blended with Understat xG improved every market slightly on held-out matches (0.04% to 0.1%), too little to justify a new feed and model version now; the code stays in, switched off. Recent per-market hit rates (last 5/10/15) are shown on the match page as context beside the model's probability, since tests found them poor predictors on their own (`docs/goals-model-report.md`).
 
+- Phase 3 (2026-10-14): corners, cards, shots and shots on target (families F-H, 24 markets, 212 selections per match) from per-statistic negative binomial count models, a separate model line (`counts-nb-0.1.0`), settled from team statistics, with confidence ratings and held-out validation (`docs/market-coverage.md`, `docs/goals-model-report.md`).
+
 **Order from here (agreed with HEO on 2026-10-08)**
 1. ~~**Phase 2**: goal timing, the match simulator, and families B to E.~~ Done.
 2. ~~**Confidence tiers** (the backtest part of Phase 4).~~ Done. Rebuild with `scripts/backtest_tiers.py` then `scripts/build_tiers.py` when the model version changes.
@@ -297,7 +299,7 @@ Ship in layers, because data quality drops sharply from goals to players.
 
 **Phase 2: Simulator, halves, game flow, minutes, combos. [DONE]** Families B, C, D, E. *Done when consistency tests pass.*
 
-**Phase 3: Count markets.** Corners, cards, shots, shots on target (F, G, H) from football-data.co.uk columns first. *Done when each has a calibration report.*
+**Phase 3: Count markets. [DONE]** Corners, cards, shots, shots on target (F, G, H) from football-data.co.uk columns. *Done when each has a calibration report.*
 
 **Phase 4: Confidence and track record.** Settlement extended to all scorable families, tiers from backtests, the improvement views in section 12a. *Done when the model card documents the tier thresholds and per-family accuracy.*
 

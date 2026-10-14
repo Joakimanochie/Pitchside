@@ -54,6 +54,7 @@ class Market:
     has_line: bool = False
     lines: tuple[float, ...] = ()  # default lines to price (empty for markets without a line)
     exclusive: bool = True  # selections cannot both happen, so a single 'pick' is meaningful
+    stat: str | None = None  # None: counts goals. Otherwise the match statistic counted per team (corners, cards, shots, sot), settled from the real stats
 
     def codes(self, selection: str, line: float | None, home: np.ndarray, away: np.ndarray) -> np.ndarray:
         if selection not in self.selections(line):
