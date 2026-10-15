@@ -58,6 +58,12 @@
 				<strong>Please gamble responsibly.</strong> You must be 18 or over. Pitchside shows statistical estimates, not advice, tips or a promise of any result. Football is uncertain and
 				no model removes that. It does not take bets. If gambling is affecting you or someone you know, free and confidential help is available from your national gambling-support service.
 			</p>
+			<nav class="foot-links" aria-label="About and policies">
+				<a href="/about">How it works</a>
+				<a href="/responsible-gambling">Responsible gambling</a>
+				<a href="/terms">Terms</a>
+				<a href="/privacy">Privacy</a>
+			</nav>
 			<p class="foot-meta">Private · data from {stamp} · model {data.index.model_version}</p>
 		</div>
 	</footer>
