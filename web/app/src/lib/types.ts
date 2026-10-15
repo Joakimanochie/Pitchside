@@ -177,7 +177,18 @@ export interface Rate {
 	actual: number | null;
 }
 
+export interface LiveLine {
+	version: string;
+	matches: number;
+	selections: number;
+	predicted: number | null;
+	actual: number | null;
+	log_loss: number | null;
+	stored_for?: number;
+}
+
 export interface Live {
+	lines: LiveLine[];
 	n: number;
 	matches: LiveMatch[];
 	log_loss: number;

@@ -8,6 +8,8 @@
 	let { data }: PageProps = $props();
 	const d = $derived(data.index);
 	const L = $derived(d.live);
+	const MIN_LIVE = 30;
+	const lineName = (v: string) => (v.startsWith('goals-') ? 'Goals, halves, timing and combinations' : v.startsWith('counts-') ? 'Corners, cards, shots, shots on target' : v.startsWith('players-') ? (v === 'players-0.2.0' ? 'Player markets, with the announced lineup' : 'Player markets (experimental)') : '');
 	const v = $derived(d.validation);
 	const C = $derived(d.confidence.validation);
 	const stored = $derived(d.fixtures.length * 945);
@@ -105,6 +107,32 @@
 					<p class="muted">Predictions from the same match move together, so this is closer to {L.n} independent results than {L.selections.toLocaleString()}.</p>
 				</div>
 			</details>
+		</div>
+		<div class="panel" style="margin-top:1rem">
+			<h3 class="h3">Live record by model version</h3>
+			<p class="muted">Each kind of prediction is its own model version, with its own live record. A version shows numbers once matches it predicted have finished; below {MIN_LIVE} matches it is too early to read.</p>
+			<div class="tbl-wrap">
+				<table>
+					<thead><tr><th scope="col">Model version</th><th scope="col">Covers</th><th scope="col">Matches scored</th><th scope="col">Predicted on average</th><th scope="col">What happened</th></tr></thead>
+					<tbody>
+						{#each L.lines as l (l.version)}
+							<tr>
+								<td>{l.version}</td>
+								<td>{lineName(l.version)}</td>
+								<td>{l.matches}</td>
+								{#if l.matches === 0}
+									<td colspan="2">Waiting for its {l.stored_for ?? 0} predicted matches to finish</td>
+								{:else if l.matches < MIN_LIVE}
+									<td>{pct1(l.predicted!)}</td><td>{pct1(l.actual!)} <span class="muted">(too early)</span></td>
+								{:else}
+									<td>{pct1(l.predicted!)}</td><td>{pct1(l.actual!)}</td>
+								{/if}
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+			<p class="muted">“Predicted on average” and “what happened” compare across every selection scored for that version. They should be close if the numbers are well calibrated.</p>
 		</div>
 		{#if L.waiting_minutes}
 			<p class="muted" style="margin-top:1rem">{L.waiting_minutes.toLocaleString()} more predictions (first goal, goal times and similar) are waiting for verified goal minutes and are not counted yet.</p>

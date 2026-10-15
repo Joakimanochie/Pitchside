@@ -105,6 +105,28 @@ def live_record(conn: psycopg.Connection, version: str) -> dict:
             "selections": sum(f["n"] for f in fams), "waiting_minutes": int(waiting)}
 
 
+def live_lines(conn: psycopg.Connection) -> list[dict]:
+    """The live record of every model version that has scored matches: goals, corners/cards/shots and players are separate lines.
+    Only one-sided probabilities against what happened: mean predicted vs mean actual, and a log loss, per version."""
+    out = []
+    for version, run_type_matches, sels, pred, act, ll in conn.execute(
+            "SELECT model_version_id, count(DISTINCT match_id), count(*), avg(probability), avg(outcome_value), avg(log_loss) FROM v_settled "
+            "WHERE run_type = 'weekly' AND outcome_value IS NOT NULL GROUP BY 1 ORDER BY 1 DESC"):
+        calib = [{"from": float(b), "n": int(c), "predicted": round(float(pr), 4), "actual": round(float(ac), 4)} for b, c, pr, ac in conn.execute(
+            "SELECT floor(least(probability, 0.9999) * 10) / 10, count(*), avg(probability), avg(outcome_value) FROM v_settled "
+            "WHERE model_version_id = %s AND run_type = 'weekly' AND outcome_value IS NOT NULL GROUP BY 1 ORDER BY 1", (version,))]
+        out.append({"version": version, "matches": int(run_type_matches), "selections": int(sels), "predicted": round(float(pred), 4),
+                    "actual": round(float(act), 4), "log_loss": None if ll is None else round(float(ll), 4), "calibration": calib})
+    seen = {o["version"] for o in out}
+    for version, n in conn.execute(
+            "SELECT r.model_version_id, count(DISTINCT p.match_id) FROM prediction_runs r JOIN predictions p ON p.run_id = r.id "
+            "WHERE r.run_type = 'weekly' GROUP BY 1 ORDER BY 1 DESC"):
+        if version not in seen:
+            out.append({"version": version, "matches": 0, "selections": 0, "predicted": None, "actual": None, "log_loss": None, "calibration": [], "stored_for": int(n)})
+    line = {"goals": 0, "counts": 1, "players": 2}
+    return sorted(out, key=lambda o: (line.get(o["version"].split("-")[0], 9), [-ord(c) for c in o["version"]]))
+
+
 def with_counts(val: dict) -> dict:
     """Add the held-out results of the corners, cards and shots markets (scripts/backtest_counts.py) to the families table."""
     path = PROCESSED / "count_validation.json"
@@ -149,6 +171,7 @@ def build_snapshot(conn: psycopg.Connection) -> dict:
         "WHERE s.run_type = 'weekly' GROUP BY 1 ORDER BY max(r.created_at) DESC LIMIT 1").fetchone()
     live = live_record(conn, scored[0] if scored else version)
     live["model_version"] = scored[0] if scored else version
+    live["lines"] = live_lines(conn)
 
     markets = {mid: {"name": m.name, "family": m.family, "exclusive": m.exclusive, "order": order[mid]} for mid, m in MARKETS.items()}
     fixtures = []
