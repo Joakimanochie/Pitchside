@@ -4,6 +4,7 @@
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
   "assets": { "binding": "ASSETS", "directory": ".svelte-kit/cloudflare" },
+  "d1_databases": [{ "binding": "DB", "database_name": "pitchside-feedback", "database_id": "fede2436-dc42-4176-ba79-e5e247e57e92" }],
   "workers_dev": true,
   "preview_urls": false
 }

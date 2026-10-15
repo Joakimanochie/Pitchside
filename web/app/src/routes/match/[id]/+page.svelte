@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ConfBars from '#lib/components/ConfBars.svelte';
+	import Feedback from '#lib/components/Feedback.svelte';
 	import KeyNumbers from '#lib/components/KeyNumbers.svelte';
 	import MarketBoard from '#lib/components/MarketBoard.svelte';
 	import OddsCompare from '#lib/components/OddsCompare.svelte';
@@ -61,4 +62,6 @@
 	<MarketBoard preds={match.preds} {index} {ctx} />
 
 	<div id="deep-dive"><Story {match} /></div>
+
+	<Feedback matchId={match.id} page="/match/{match.id}" />
 </div>

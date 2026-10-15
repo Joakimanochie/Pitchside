@@ -8,6 +8,7 @@
 		<h2>What we collect today</h2>
 		<ul>
 			<li><strong>Your email address.</strong> The preview is protected by Cloudflare Access. To let you in, Cloudflare checks your email address against the invited list and emails you a one-time code. Cloudflare keeps access logs (email, time, IP address, location) under its own terms.</li>
+			<li><strong>Feedback you send.</strong> If you use the feedback form, we store your answer, your comment, the page it was sent from and the email you signed in with, so we can follow up and improve the product.</li>
 			<li><strong>Technical request data.</strong> Like any website, our host (Cloudflare) processes your IP address and browser details to deliver pages and protect the service.</li>
 		</ul>
 
