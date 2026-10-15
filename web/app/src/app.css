@@ -328,3 +328,5 @@ h2.sr-only { font-size: 1.6rem; line-height: 1.2; }
   .brand-name { display: none; }
   .nav-links a { padding: .45rem .6rem; font-size: .9rem; }
 }
+
+.stale { margin: 0; padding: 10px 16px; text-align: center; font-size: 0.875rem; background: color-mix(in srgb, var(--warn, #f5a524) 18%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--warn, #f5a524) 45%, transparent); }

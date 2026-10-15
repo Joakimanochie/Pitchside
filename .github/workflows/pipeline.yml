@@ -73,3 +73,25 @@ jobs:
         env:
           CLOUDFLARE_ACCOUNT_ID: 732527cd8d00cefae7077399663914e8
         run: npx wrangler deploy
+
+  # When the daily run fails, open (or add to) one GitHub issue so it is noticed. GitHub also emails the repository owner about failed scheduled runs.
+  alert:
+    needs: pipeline
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open or update the failure issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Daily pipeline failed"
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$title\" in:title" --json number --jq '.[0].number')
+          body="The daily run failed: $RUN_URL"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body"
+          fi

@@ -13,8 +13,11 @@
 		new Date(data.index.generated_at).toLocaleString('en-GB', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: clock.local ? undefined : 'UTC' })
 	);
 
+	// Pages are built once a day. If the daily job has silently stopped, say so rather than show old numbers as current.
+	let stale = $state(false);
 	onMount(() => {
 		clock.local = true;
+		stale = Date.now() - new Date(data.index.generated_at).getTime() > 36 * 3600 * 1000;
 	});
 </script>
 
@@ -47,6 +50,10 @@
 			<span class="nav-note">18+ · Estimates, not advice</span>
 		</nav>
 	</header>
+
+	{#if stale}
+		<p class="stale" role="status">These predictions were last refreshed on {stamp}. The daily update may have stopped, so newer matches or results may be missing.</p>
+	{/if}
 
 	<main id="main" tabindex="-1">
 		{@render children()}
