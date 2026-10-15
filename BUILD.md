@@ -24,6 +24,7 @@ Builder: HEO. Executor: Claude Code. Read `CLAUDE.md` first for the gstack setup
 - Phase 3 (2026-10-14): corners, cards, shots and shots on target (families F-H, 24 markets, 212 selections per match) from per-statistic negative binomial count models, a separate model line (`counts-nb-0.1.0`), settled from team statistics, with confidence ratings and held-out validation (`docs/market-coverage.md`, `docs/goals-model-report.md`).
 
 - Phase 6, first cut (2026-10-15): experimental player markets (anytime goalscorer, assist, shots, shots on target; family I) from recent shot shares and the goals model, no lineups, own model line `players-0.1.0`, settled from shot events, with held-out validation and confidence ratings. Results view added (every stored prediction's outcome for recent matches).
+- Lineups (2026-10-16): a half-hourly job (`.github/workflows/lineups.yml`, `pitchside.pipeline.lineups`) stores announced ESPN lineups (`lineups` table) for matches kicking off within three hours and re-prices that match's player markets as `players-0.2.0` (starters keep their share, substitutes count 0.3, others out). The adjustment is not yet validated: there is no history of lineups, so they are being collected to backtest it. The site shows the newest player prediction per match. Not yet seen against a real announced lineup.
 
 **Order from here (agreed with HEO on 2026-10-08)**
 1. ~~**Phase 2**: goal timing, the match simulator, and families B to E.~~ Done.

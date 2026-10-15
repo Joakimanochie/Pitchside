@@ -122,8 +122,9 @@ def build_snapshot(conn: psycopg.Connection) -> dict:
     version = conn.execute("SELECT model_version_id FROM prediction_runs WHERE run_type = 'weekly' AND model_version_id LIKE 'goals-%' ORDER BY created_at DESC LIMIT 1").fetchone()[0]
     # the count models (corners, cards, shots) are their own model line; predictions from the newest of each line are shown together
     counts = conn.execute("SELECT model_version_id FROM prediction_runs WHERE run_type = 'weekly' AND model_version_id LIKE 'counts-%' ORDER BY created_at DESC LIMIT 1").fetchone()
-    players = conn.execute("SELECT model_version_id FROM prediction_runs WHERE run_type = 'weekly' AND model_version_id LIKE 'players-%' ORDER BY created_at DESC LIMIT 1").fetchone()
-    versions = [version] + ([counts[0]] if counts else []) + ([players[0]] if players else [])
+    # player markets: every match shows its newest player prediction (the weekly one, or the lineup-aware one made once the lineup was named)
+    player_versions = [r[0] for r in conn.execute("SELECT DISTINCT model_version_id FROM prediction_runs WHERE run_type = 'weekly' AND model_version_id LIKE 'players-%'")]
+    versions = [version] + ([counts[0]] if counts else []) + player_versions
     matches = conn.execute(
         "SELECT DISTINCT m.id, m.league_id, m.kickoff, th.canonical_name, ta.canonical_name, m.home_team_id, m.away_team_id FROM predictions p "
         "JOIN prediction_runs r ON r.id = p.run_id JOIN matches m ON m.id = p.match_id "
@@ -137,7 +138,8 @@ def build_snapshot(conn: psycopg.Connection) -> dict:
     for mid, market_id, line, sel, prob, pick in conn.execute(
             "SELECT p.match_id, p.market_id, p.line, p.selection, p.probability, p.is_pick FROM predictions p "
             "JOIN prediction_runs r ON r.id = p.run_id WHERE r.model_version_id = ANY(%s) AND r.run_type = 'weekly' "
-            "AND p.match_id = ANY(%s) ORDER BY p.id", (versions, ids)):
+            "AND p.match_id = ANY(%s) AND (r.model_version_id NOT LIKE 'players-%%' OR r.id = (SELECT r2.id FROM prediction_runs r2 JOIN predictions p2 ON p2.run_id = r2.id "
+            "WHERE p2.match_id = p.match_id AND r2.model_version_id LIKE 'players-%%' AND r2.run_type = 'weekly' ORDER BY r2.created_at DESC LIMIT 1)) ORDER BY p.id", (versions, ids)):
         tier = TIERS.index(tier_for(rules, market_id, MARKETS[market_id].family, float(prob))) if market_id in MARKETS else 2
         preds[mid][market_id]["null" if line is None else str(float(line))].append([sel, round(float(prob), 4), 1 if pick else 0, tier])
 

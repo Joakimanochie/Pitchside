@@ -89,3 +89,19 @@ def at_least(mean: float | pd.Series, k: int, dispersion: float) -> float | pd.S
         return poisson.sf(k - 1, mean)
     r = 1.0 / dispersion
     return nbinom.sf(k - 1, r, r / (r + mean))
+
+
+# Lineup adjustment. Not validated: we have no history of announced lineups yet (they are stored from now on so it can be tested).
+BENCH_WEIGHT = 0.3      # a substitute plays about a quarter of a match
+MAX_BOOST = 1.35
+
+
+def apply_lineup(rates: TeamRates, starters: set[str], bench: set[str]) -> TeamRates:
+    """Rates with the lineup applied: starters keep their share, named substitutes count 0.3, everyone else not in the squad is out.
+    The club's total output is unchanged, so what absent players would have done passes to those who play (by at most 35%)."""
+    players = rates.players
+    weight = pd.Series([1.0 if n in starters else BENCH_WEIGHT if n in bench else 0.0 for n in players.index], index=players.index)
+    scaled = players.mul(weight, axis=0)
+    before, after = players.sum(), scaled.sum()
+    boost = (before / after.where(after > 0)).fillna(1.0).clip(upper=MAX_BOOST).clip(lower=1.0)
+    return TeamRates(weight=rates.weight, team=rates.team, players=scaled.mul(boost, axis=1))
