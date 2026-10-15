@@ -10,12 +10,13 @@ export const TABS = [
 	{ id: 'combos', label: 'Combos' },
 	{ id: 'corners', label: 'Corners' },
 	{ id: 'cards', label: 'Cards' },
-	{ id: 'shots', label: 'Shots' }
+	{ id: 'shots', label: 'Shots' },
+	{ id: 'players', label: 'Players' }
 ] as const;
 export type TabId = (typeof TABS)[number]['id'];
 
 const MAIN_IDS = new Set(['1x2', 'double_chance', 'draw_no_bet', 'ou_total', 'btts', 'asian_handicap', 'handicap_3way']);
-export const SORT_BY_PROBABILITY = new Set(['correct_score', 'multiscores']);
+export const SORT_BY_PROBABILITY = new Set(['correct_score', 'multiscores', 'player_anytime_goal', 'player_assist', 'player_shots', 'player_sot']);
 export const COLLAPSED_ROWS = 6;
 
 export const pct0 = (p: number) => `${Math.round(p * 100)}%`;
@@ -106,7 +107,7 @@ export function matchesQuery(title: string, query: string): boolean {
 
 export function tabOf(mid: string, meta: MarketMeta): TabId {
 	if (meta.family === 'A') return MAIN_IDS.has(mid) ? 'main' : 'goals';
-	return ({ B: 'halves', C: 'flow', D: 'minutes', E: 'combos', F: 'corners', G: 'cards', H: 'shots' } as const)[meta.family];
+	return ({ B: 'halves', C: 'flow', D: 'minutes', E: 'combos', F: 'corners', G: 'cards', H: 'shots', I: 'players' } as const)[meta.family];
 }
 
 /** The line a card opens on: prefer a half line, then the one closest to a coin flip. */

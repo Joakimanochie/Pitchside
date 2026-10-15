@@ -147,7 +147,7 @@ def test_build_outcomes_records_scores_and_coverage(db):
     assert build_outcomes(db) == 1
     record, coverage = db.execute("SELECT record, coverage FROM match_outcomes WHERE match_id = %s", (mid,)).fetchone()
     assert (record["ft_home"], record["ft_away"], record["ht_home"], record["ht_away"]) == (2, 1, 1, 0)
-    assert coverage == {"ft": True, "ht": True, "team_stats": False, "goal_minutes": False}
+    assert coverage == {"ft": True, "ht": True, "team_stats": False, "goal_minutes": False, "player_data": False}
 
 
 def test_track_record_views_separate_live_from_backtest(db):

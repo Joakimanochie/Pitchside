@@ -90,6 +90,19 @@ def odds_block(conn: psycopg.Connection, match_id: int, preds: dict, rules: dict
     return {"fetched_at": newest.astimezone(base.UTC).isoformat(timespec="minutes"), "source": "football-data.co.uk", "markets": markets}
 
 
+def player_sides(conn: psycopg.Connection, preds: dict, home_id: int, away_id: int) -> dict[str, str]:
+    """For every player named in the player markets, 'home' or 'away': the side he most recently shot for."""
+    names = sorted({sel for mid, lines in preds.items() if MARKETS.get(mid) is not None and MARKETS[mid].family == "I" for rows in lines.values() for sel, *_ in rows})
+    if not names:
+        return {}
+    out = {}
+    for name, team_id in conn.execute(
+            "SELECT DISTINCT ON (s.player_name) s.player_name, s.team_id FROM shot_events s JOIN matches m ON m.id = s.match_id "
+            "WHERE s.team_id IN (%s, %s) AND s.player_name = ANY(%s) ORDER BY s.player_name, m.match_date DESC", (home_id, away_id, names)):
+        out[name] = "home" if team_id == home_id else "away"
+    return out
+
+
 OUTCOME = {"won": 1, "lost": 0, "push": 2}   # anything else (not scorable, void, not yet settled) is 3
 
 
@@ -99,12 +112,12 @@ def export_results(conn: psycopg.Connection, rules: dict, out_dir: Path) -> list
     for old in out_dir.glob("*.json"):
         old.unlink()
     matches = conn.execute(
-        "SELECT m.id, m.league_id, m.match_date, th.canonical_name, ta.canonical_name, m.ft_home, m.ft_away, m.ht_home, m.ht_away "
+        "SELECT m.id, m.league_id, m.match_date, th.canonical_name, ta.canonical_name, m.ft_home, m.ft_away, m.ht_home, m.ht_away, m.home_team_id, m.away_team_id "
         "FROM matches m JOIN teams th ON th.id = m.home_team_id JOIN teams ta ON ta.id = m.away_team_id "
         "WHERE m.status = 'finished' AND m.match_date >= current_date - %s AND EXISTS (SELECT 1 FROM predictions p WHERE p.match_id = m.id) "
         "ORDER BY m.match_date DESC, m.id", (RESULT_DAYS,)).fetchall()
     entries = []
-    for mid, league, day, home, away, ft_h, ft_a, ht_h, ht_a in matches:
+    for mid, league, day, home, away, ft_h, ft_a, ht_h, ht_a, home_id, away_id in matches:
         # newest run of each model line (goals, counts) that predicted this match
         runs = {}
         for run_id, version, created in conn.execute(
@@ -139,7 +152,7 @@ def export_results(conn: psycopg.Connection, rules: dict, out_dir: Path) -> list
         actual = "home" if ft_h > ft_a else "draw" if ft_h == ft_a else "away"
         entry = {"id": mid, "league": league, "date": day.isoformat(), "home": home, "away": away, "ft": [ft_h, ft_a], "ht": None if ht_h is None else [ht_h, ht_a],
                  "p": x12, "actual": actual, "picks": picks, "picks_hit": picks_hit, "high_picks": high, "high_hit": high_hit}
-        detail = {**entry, "stats": stats, "versions": [r[2] for r in runs.values()], "not_scored": unscored, "preds": preds}
+        detail = {**entry, "stats": stats, "versions": [r[2] for r in runs.values()], "not_scored": unscored, "preds": preds, "players": player_sides(conn, preds, home_id, away_id)}
         (out_dir / f"{mid}.json").write_text(json.dumps(detail, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
         entries.append(entry)
     return entries
@@ -161,7 +174,8 @@ def main() -> None:
                       "preds": snap["preds"][str(f["id"])],
                       "form": {"home": recent_results(conn, f["home_id"], day), "away": recent_results(conn, f["away_id"], day)},
                       "h2h": meetings(conn, f["home_id"], f["away_id"], day),
-                      "odds": odds_block(conn, f["id"], snap["preds"][str(f["id"])], rules)}
+                      "odds": odds_block(conn, f["id"], snap["preds"][str(f["id"])], rules),
+                      "players": player_sides(conn, snap["preds"][str(f["id"])], f["home_id"], f["away_id"])}
             (match_dir / f"{f['id']}.json").write_text(json.dumps(detail, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
             x12 = snap["preds"][str(f["id"])]["1x2"]["null"]
             index_fixtures.append({"has_odds": detail["odds"] is not None, "id": f["id"], "league": f["league"], "kickoff": f["kickoff"], "home": f["home"], "away": f["away"], "p": f["p"],

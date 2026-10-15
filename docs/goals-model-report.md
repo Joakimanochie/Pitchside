@@ -262,3 +262,20 @@ Held-out (2022/23 onwards, 13,000 team-matches), by how many matches the club ha
 | 80 or more | 11,378 | +0.014 (±0.01) | +0.016 |
 
 No clear bias: the promoted group is within about one standard error of zero on both, so no special prior for promoted clubs is needed and none was added.
+
+## Player markets (experimental; `scripts/backtest_players.py`, `scripts/backtest_player_counts.py`)
+
+Understat shot events (2023/24 onward, 142,000 shots) give each player's recent share of his club's goals, shots, shots on target and assists. No lineup is used (lineups are published about an hour before kickoff;
+the daily job runs days ahead), so a player's recent share carries availability with it. For a coming match the club's expected goals come from the goals model and the player takes his share of them:
+P(scores) = 1 - exp(-club expected goals x share), where the share is the player's share of the club's xG over its last 45 matches (memory of 14 matches). Settings were chosen on matches before 2026-01-01
+and scored on matches from 2026 onward (about 52,000 player-matches).
+
+| Held-out | Result |
+|---|---|
+| Anytime goalscorer log loss | 0.1885, 10.9% better than giving every player the same chance (0.2115) and far better than a player's raw recent scoring rate (0.2556) |
+| Shots over 0.5 / 1.5 / 2.5 | skill over the same chance +9.3% / +10.9% / +11.6% |
+| Shots on target over 0.5 / 1.5 | +8.6% / +11.2% |
+| Anytime assist | +2.5% (weak) |
+
+Calibration is close for ordinary players; the very likely scorers (30-40% predicted) scored more often than predicted (42% against 33%). Rotation, injuries and suspensions are unknown, which is why the whole family is labelled experimental
+and why a player who did not play is settled as a loss. Confidence ratings for family I come from the same rule as the others.

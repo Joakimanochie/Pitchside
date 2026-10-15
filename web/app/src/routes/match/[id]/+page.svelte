@@ -10,7 +10,7 @@
 	let { data }: PageProps = $props();
 	const match = $derived(data.match);
 	const index = $derived(data.index);
-	const ctx = $derived({ home: match.home, away: match.away });
+	const ctx = $derived({ home: match.home, away: match.away, players: match.players });
 
 	const x12 = $derived(Object.fromEntries((match.preds['1x2']?.null ?? []).map((r) => [r[0], r[3]])) as Record<string, number>);
 	const c = $derived(match.ctx);

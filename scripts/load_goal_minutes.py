@@ -20,7 +20,7 @@ from pitchside.db.migrate import _load_env, apply_migrations
 from pitchside.db.teams import load_aliases, seed_leagues
 from pitchside.ingest.footballdata import load_seasons
 from pitchside.ingest.load_matches import load_footballdata
-from pitchside.ingest.understat_goals import load_goals
+from pitchside.ingest.understat_goals import load_goals, load_shots
 from pitchside.leagues import LEAGUES
 from pitchside.pipeline.goal_minutes import read_season_events
 
@@ -39,12 +39,14 @@ def run(conn: psycopg.Connection, first: int, last: int, league_ids: list[str], 
         for season in range(first, last + 1):
             us = sd.Understat(lg.understat, str(season))
             schedule = us.read_schedule().reset_index()
-            out = load_goals(conn, lid, season, read_season_events(us, schedule), schedule)
+            events = read_season_events(us, schedule)
+            out = load_goals(conn, lid, season, events, schedule)
+            shots = load_shots(conn, lid, season, events, schedule)
             conn.commit()
             finished = conn.execute("SELECT count(*) FROM matches WHERE league_id = %s AND season = %s AND status = 'finished'",
                                     (lid, season)).fetchone()[0]
             print(f"{lid:10} {season}: finished {finished:3} | verified {out['loaded']:3} ({out['loaded'] / max(finished, 1):.1%}) "
-                  f"| goals {out['goals']:4} | inconsistent {len(out['inconsistent'])}", flush=True)
+                  f"| goals {out['goals']:4} | shots {shots['shots']:5} | inconsistent {len(out['inconsistent'])}", flush=True)
             for bad in out["inconsistent"][:5]:
                 print("      ", bad, flush=True)
             grand["loaded"] += out["loaded"]; grand["goals"] += out["goals"]; grand["bad"] += len(out["inconsistent"])

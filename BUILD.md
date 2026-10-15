@@ -23,6 +23,8 @@ Builder: HEO. Executor: Claude Code. Read `CLAUDE.md` first for the gstack setup
 
 - Phase 3 (2026-10-14): corners, cards, shots and shots on target (families F-H, 24 markets, 212 selections per match) from per-statistic negative binomial count models, a separate model line (`counts-nb-0.1.0`), settled from team statistics, with confidence ratings and held-out validation (`docs/market-coverage.md`, `docs/goals-model-report.md`).
 
+- Phase 6, first cut (2026-10-15): experimental player markets (anytime goalscorer, assist, shots, shots on target; family I) from recent shot shares and the goals model, no lineups, own model line `players-0.1.0`, settled from shot events, with held-out validation and confidence ratings. Results view added (every stored prediction's outcome for recent matches).
+
 **Order from here (agreed with HEO on 2026-10-08)**
 1. ~~**Phase 2**: goal timing, the match simulator, and families B to E.~~ Done.
 2. ~~**Confidence tiers** (the backtest part of Phase 4).~~ Done. Rebuild with `scripts/backtest_tiers.py` then `scripts/build_tiers.py` when the model version changes.
@@ -305,7 +307,7 @@ Ship in layers, because data quality drops sharply from goals to players.
 
 **Phase 5: Product.** SvelteKit app (no separate API) with fixtures, match board, deep-dive, track record. Run `/qa` and `/design-review`. *Done when a stranger can open the match board and understand it unaided.*
 
-**Phase 6: Player markets (experimental).** Lineups, per-player rates, family I. Ship behind an "experimental" label unless calibration supports more.
+**Phase 6: Player markets (experimental). [FIRST CUT DONE]** Per-player recent shares of goals, shots, shots on target and assists, family I, labelled experimental. Still to do: lineups (first/last scorer and anything lineup dependent), cards and fouls.
 
 **Phase 7: Odds comparison.** Section 11 add-on (the portfolio write-up is out of scope).
 

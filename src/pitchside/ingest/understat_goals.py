@@ -126,3 +126,36 @@ def load_goals(conn: psycopg.Connection, league_id: str, season: int, events: pd
             "UPDATE matches SET source_ids = source_ids || jsonb_build_object('understat', %s::text, 'goal_minutes', %s::boolean) WHERE id = %s",
             [(gid, ok, m) for m, gid, ok in flagged])
     return summary
+
+
+def load_shots(conn: psycopg.Connection, league_id: str, season: int, events: pd.DataFrame, schedule: pd.DataFrame) -> dict:
+    """Store every shot of the schedule's finished matches (who took it, who set it up, xG). Idempotent: a shot already stored is skipped.
+
+    Unlike the goal minutes this does not need the goals to add up: a shot's player and xG stand on their own."""
+    if events.empty or "player" not in events.columns:
+        return {"matches": 0, "shots": 0}
+    resolver = TeamResolver(conn)
+    ids = resolver.resolve_all(SOURCE, [*schedule["home_team"], *schedule["away_team"]])
+    db = {(h, a): mid for mid, h, a in conn.execute(
+        "SELECT id, home_team_id, away_team_id FROM matches WHERE league_id = %s AND season = %s AND status = 'finished'", (league_id, season))}
+    match_of = {}
+    for s in schedule.itertuples(index=False):
+        mid = db.get((ids[s.home_team], ids[s.away_team]))
+        if mid is not None:
+            match_of[s.game_id] = (mid, ids[s.home_team], ids[s.away_team], s.home_team)
+    rows, matches = [], set()
+    for e in events[events["game_id"].isin(match_of)].itertuples(index=False):
+        mid, home_id, away_id, home_name = match_of[e.game_id]
+        team_id = home_id if e.team == home_name else away_id
+        shot_id = _clean(e.shot_id)
+        if shot_id is None:
+            continue
+        rows.append((mid, team_id, _clean(e.player), _clean(e.assist_player), None if _clean(e.minute) is None else int(e.minute), None if _clean(e.xg) is None else float(e.xg),
+                     str(e.result), _clean(e.situation), int(shot_id)))
+        matches.add(mid)
+    if rows:
+        with conn.cursor() as cur:
+            cur.executemany(
+                "INSERT INTO shot_events (match_id, team_id, player_name, assist_name, minute, xg, result, situation, understat_shot_id) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (match_id, understat_shot_id) DO NOTHING", rows)
+    return {"matches": len(matches), "shots": len(rows)}

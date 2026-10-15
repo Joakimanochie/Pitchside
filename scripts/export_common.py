@@ -122,7 +122,8 @@ def build_snapshot(conn: psycopg.Connection) -> dict:
     version = conn.execute("SELECT model_version_id FROM prediction_runs WHERE run_type = 'weekly' AND model_version_id LIKE 'goals-%' ORDER BY created_at DESC LIMIT 1").fetchone()[0]
     # the count models (corners, cards, shots) are their own model line; predictions from the newest of each line are shown together
     counts = conn.execute("SELECT model_version_id FROM prediction_runs WHERE run_type = 'weekly' AND model_version_id LIKE 'counts-%' ORDER BY created_at DESC LIMIT 1").fetchone()
-    versions = [version] + ([counts[0]] if counts else [])
+    players = conn.execute("SELECT model_version_id FROM prediction_runs WHERE run_type = 'weekly' AND model_version_id LIKE 'players-%' ORDER BY created_at DESC LIMIT 1").fetchone()
+    versions = [version] + ([counts[0]] if counts else []) + ([players[0]] if players else [])
     matches = conn.execute(
         "SELECT DISTINCT m.id, m.league_id, m.kickoff, th.canonical_name, ta.canonical_name, m.home_team_id, m.away_team_id FROM predictions p "
         "JOIN prediction_runs r ON r.id = p.run_id JOIN matches m ON m.id = p.match_id "

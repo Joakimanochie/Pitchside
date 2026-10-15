@@ -14,7 +14,7 @@ import psycopg
 
 from pitchside.db.teams import TeamResolver
 from pitchside.ingest.footballdata import current_season
-from pitchside.ingest.understat_goals import SOURCE, load_goals
+from pitchside.ingest.understat_goals import SOURCE, load_goals, load_shots
 from pitchside.leagues import LEAGUES
 
 RETRY_DAYS = 3
@@ -66,6 +66,7 @@ def ingest_goal_minutes(conn: psycopg.Connection, league_id: str, season: int | 
     events = pd.concat(frames, ignore_index=True)
     have = wanted[wanted["game_id"].isin(events["game_id"])]
     out = load_goals(conn, league_id, season, events, have)
+    load_shots(conn, league_id, season, events, have)     # the same fetch also gives every shot, for the player layer
     conn.commit()
     return {"pending": len(pending), "fetched": len(have), "loaded": out["loaded"], "unverified": len(out["inconsistent"]),
             "unavailable": unavailable}

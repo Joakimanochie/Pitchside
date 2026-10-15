@@ -27,6 +27,7 @@ import psycopg
 from pitchside.db.migrate import _load_env
 from pitchside.markets.base import settle as settle_market
 from pitchside.markets.counts import stat_value
+from pitchside.markets.players import PlayerMarket, settle_player
 from pitchside.markets.record_base import RecordMarket, settle_record
 from pitchside.markets.registry import MARKETS
 from pitchside.sim.record import MatchRecord, from_goals, from_scores
@@ -60,14 +61,23 @@ def build_outcomes(conn: psycopg.Connection) -> int:
             "SELECT match_id, period, minute, details ->> 'side' FROM match_events WHERE match_id = ANY(%s) "
             "AND source = 'understat' AND event_type = ANY(%s) ORDER BY match_id, period, minute", (verified, list(GOAL_TYPES))):
         goals[match_id].append([side, period, minute])
+    players: dict[int, dict] = defaultdict(dict)     # per player counts, only for matches whose shots we hold
+    for match_id, name, goals_n, shots_n, sot_n in conn.execute(
+            "SELECT match_id, player_name, count(*) FILTER (WHERE result = 'Goal'), count(*), count(*) FILTER (WHERE result IN ('Goal', 'Saved Shot')) "
+            "FROM shot_events WHERE match_id = ANY(%s) AND result <> 'Own Goal' AND player_name IS NOT NULL GROUP BY match_id, player_name", (ids,)):
+        players[match_id][name] = {"goals": goals_n, "shots": shots_n, "sot": sot_n, "assists": 0}
+    for match_id, name, assists_n in conn.execute(
+            "SELECT match_id, assist_name, count(*) FROM shot_events WHERE match_id = ANY(%s) AND result = 'Goal' AND assist_name IS NOT NULL "
+            "GROUP BY match_id, assist_name", (ids,)):
+        players[match_id].setdefault(name, {"goals": 0, "shots": 0, "sot": 0, "assists": 0})["assists"] = assists_n
     params = []
     for match_id, fh, fa, hh, ha, flag in matches:
         home, away = stats.get((match_id, True)), stats.get((match_id, False))
         has_minutes = flag == "true"
         record = {"ft_home": fh, "ft_away": fa, "ht_home": hh, "ht_away": ha, "home_stats": home, "away_stats": away,
-                  "goals": goals[match_id] if has_minutes else None}
+                  "goals": goals[match_id] if has_minutes else None, "players": players.get(match_id)}
         coverage = {"ft": True, "ht": hh is not None and ha is not None, "team_stats": home is not None and away is not None,
-                    "goal_minutes": has_minutes}
+                    "goal_minutes": has_minutes, "player_data": match_id in players}
         params.append((match_id, json.dumps(record), json.dumps(coverage)))
     with conn.cursor() as cur:
         cur.executemany(
@@ -97,7 +107,11 @@ def _decide(row, records: dict) -> tuple[str, float | None, dict]:
     observed = {"ft_home": record["ft_home"], "ft_away": record["ft_away"]}
     coverage = coverage or {}
     try:
-        if getattr(market, "stat", None):   # corners, cards, shots: settled from the real team statistics, never from goals
+        if isinstance(market, PlayerMarket):   # one player's own count, from the shot events
+            if record.get("players") is None:
+                return "not_scorable", None, {"reason": "player_data_missing", **observed}
+            res = settle_player(market, None if line is None else float(line), selection, record["players"])
+        elif getattr(market, "stat", None):   # corners, cards, shots: settled from the real team statistics, never from goals
             home_n, away_n = stat_value(market.stat, record.get("home_stats")), stat_value(market.stat, record.get("away_stats"))
             if home_n is None or away_n is None:
                 return "not_scorable", None, {"reason": "team_stats_missing", **observed}
@@ -129,7 +143,9 @@ def settle_predictions(conn: psycopg.Connection) -> Counter:
         "   OR (m.status = 'finished' AND mo.match_id IS NOT NULL AND (s.prediction_id IS NULL "
         "       OR (s.observed ->> 'ft_home') IS DISTINCT FROM (mo.record ->> 'ft_home') "
         "       OR (s.observed ->> 'ft_away') IS DISTINCT FROM (mo.record ->> 'ft_away') "
-        "       OR ((s.observed ->> 'reason') = 'goal_minutes_unverified' AND (mo.coverage ->> 'goal_minutes') = 'true'))) "
+        "       OR ((s.observed ->> 'reason') = 'goal_minutes_unverified' AND (mo.coverage ->> 'goal_minutes') = 'true') "
+        "       OR ((s.observed ->> 'reason') = 'player_data_missing' AND (mo.coverage ->> 'player_data') = 'true') "
+        "       OR ((s.observed ->> 'reason') = 'team_stats_missing' AND (mo.coverage ->> 'team_stats') = 'true'))) "
         "ORDER BY p.id").fetchall()
     counts: Counter = Counter()
     records: dict = {}

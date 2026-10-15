@@ -6240,6 +6240,132 @@
    "se": 0.082,
    "tier": "Low"
   },
+  "player_anytime_goal|0": {
+   "n": 74727,
+   "skill": 0.056,
+   "gap": -0.0059,
+   "se": 0.0006,
+   "tier": "High"
+  },
+  "player_anytime_goal|1": {
+   "n": 9538,
+   "skill": 0.1461,
+   "gap": -0.0024,
+   "se": 0.0036,
+   "tier": "High"
+  },
+  "player_anytime_goal|2": {
+   "n": 920,
+   "skill": 0.319,
+   "gap": 0.0205,
+   "se": 0.015,
+   "tier": "High"
+  },
+  "player_anytime_goal|3": {
+   "n": 122,
+   "skill": 0.5453,
+   "gap": -0.0673,
+   "se": 0.0449,
+   "tier": "Low"
+  },
+  "player_assist|0": {
+   "n": 48965,
+   "skill": 0.0117,
+   "gap": -0.0058,
+   "se": 0.0008,
+   "tier": "Low"
+  },
+  "player_assist|1": {
+   "n": 4012,
+   "skill": 0.0801,
+   "gap": 0.0196,
+   "se": 0.0053,
+   "tier": "High"
+  },
+  "player_assist|2": {
+   "n": 67,
+   "skill": 0.3792,
+   "gap": -0.0231,
+   "se": 0.0553,
+   "tier": "Low"
+  },
+  "player_shots|0": {
+   "n": 107124,
+   "skill": 0.0435,
+   "gap": -0.0216,
+   "se": 0.0005,
+   "tier": "Medium"
+  },
+  "player_shots|1": {
+   "n": 61485,
+   "skill": 0.075,
+   "gap": -0.0115,
+   "se": 0.0015,
+   "tier": "High"
+  },
+  "player_shots|2": {
+   "n": 34294,
+   "skill": 0.0748,
+   "gap": 0.0001,
+   "se": 0.0025,
+   "tier": "High"
+  },
+  "player_shots|3": {
+   "n": 20563,
+   "skill": 0.1368,
+   "gap": 0.0047,
+   "se": 0.0035,
+   "tier": "High"
+  },
+  "player_shots|4": {
+   "n": 4790,
+   "skill": 0.295,
+   "gap": -0.0093,
+   "se": 0.0069,
+   "tier": "High"
+  },
+  "player_shots|5": {
+   "n": 371,
+   "skill": 0.4988,
+   "gap": -0.0222,
+   "se": 0.0214,
+   "tier": "High"
+  },
+  "player_sot|0": {
+   "n": 97821,
+   "skill": 0.0573,
+   "gap": -0.011,
+   "se": 0.0006,
+   "tier": "High"
+  },
+  "player_sot|1": {
+   "n": 35263,
+   "skill": 0.0416,
+   "gap": 0.0081,
+   "se": 0.0019,
+   "tier": "Medium"
+  },
+  "player_sot|2": {
+   "n": 10584,
+   "skill": 0.1255,
+   "gap": 0.0123,
+   "se": 0.0045,
+   "tier": "High"
+  },
+  "player_sot|3": {
+   "n": 3128,
+   "skill": 0.2782,
+   "gap": 0.0116,
+   "se": 0.0089,
+   "tier": "High"
+  },
+  "player_sot|4": {
+   "n": 164,
+   "skill": 0.5412,
+   "gap": -0.0484,
+   "se": 0.0372,
+   "tier": "Low"
+  },
   "shots_ah|0": {
    "n": 4991,
    "skill": 0.3797,
@@ -8383,40 +8509,82 @@
    "gap": 0.011,
    "se": 0.0018,
    "tier": "High"
+  },
+  "I|0": {
+   "n": 328637,
+   "skill": 0.0453,
+   "gap": -0.0125,
+   "se": 0.0003,
+   "tier": "Medium"
+  },
+  "I|1": {
+   "n": 110298,
+   "skill": 0.0717,
+   "gap": -0.0033,
+   "se": 0.0011,
+   "tier": "High"
+  },
+  "I|2": {
+   "n": 45865,
+   "skill": 0.0935,
+   "gap": 0.0033,
+   "se": 0.0022,
+   "tier": "High"
+  },
+  "I|3": {
+   "n": 23813,
+   "skill": 0.1621,
+   "gap": 0.0053,
+   "se": 0.0032,
+   "tier": "High"
+  },
+  "I|4": {
+   "n": 4954,
+   "skill": 0.307,
+   "gap": -0.0106,
+   "se": 0.0067,
+   "tier": "High"
+  },
+  "I|5": {
+   "n": 371,
+   "skill": 0.4988,
+   "gap": -0.0222,
+   "se": 0.0214,
+   "tier": "High"
   }
  },
  "validation": {
-  "fitted_on_matches": 3208,
-  "checked_on_matches": 1192,
-  "until": "2026-01-24",
+  "fitted_on_matches": 44893,
+  "checked_on_matches": 59914,
+  "until": "2026-02-01",
   "tiers": [
    {
     "tier": "High",
-    "share": 0.2191,
-    "predicted": 0.4304,
-    "happened": 0.4307,
-    "skill": 0.0832
+    "share": 0.2317,
+    "predicted": 0.3853,
+    "happened": 0.3895,
+    "skill": 0.0998
    },
    {
     "tier": "Medium",
-    "share": 0.4183,
-    "predicted": 0.2708,
-    "happened": 0.2709,
-    "skill": 0.0349
+    "share": 0.4904,
+    "predicted": 0.1803,
+    "happened": 0.1848,
+    "skill": 0.0411
    },
    {
     "tier": "Low",
-    "share": 0.3626,
-    "predicted": 0.4081,
-    "happened": 0.4078,
-    "skill": 0.012
+    "share": 0.2779,
+    "predicted": 0.4141,
+    "happened": 0.4141,
+    "skill": 0.0137
    }
   ]
  },
  "backtest": {
-  "matches": 4400,
+  "matches": 88307,
   "from": "2022-08-05",
   "to": "2026-10-12",
-  "selections": 1959000
+  "selections": 2472938
  }
 }

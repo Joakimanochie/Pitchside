@@ -5,7 +5,7 @@ export type LinesMap = Record<string, Sel[]>;
 
 export interface MarketMeta {
 	name: string;
-	family: 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H';
+	family: 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I';
 	exclusive: boolean;
 	order: number;
 }
@@ -13,6 +13,8 @@ export interface MarketMeta {
 export interface Ctx {
 	home: string;
 	away: string;
+	/** player name -> the side he plays for (family I markets) */
+	players?: Record<string, 'home' | 'away'>;
 }
 
 export interface MatchContext {
@@ -123,6 +125,7 @@ export interface ResultDetail extends ResultEntry {
 	stats: Partial<Record<'home' | 'away', { corners: number | null; cards: number | null; shots: number | null; sot: number | null }>>;
 	versions: string[];
 	not_scored: number;
+	players: Record<string, 'home' | 'away'>;
 	preds: Record<string, LinesMap>;
 }
 
@@ -138,6 +141,7 @@ export interface MatchDetail {
 	form: { home: FormResult[]; away: FormResult[] };
 	h2h: Meeting[];
 	odds: OddsBlock | null;
+	players: Record<string, 'home' | 'away'>;
 }
 
 export interface CalibrationPoint {

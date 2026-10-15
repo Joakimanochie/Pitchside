@@ -30,6 +30,7 @@
 		)
 	);
 	const v = $derived(index.confidence.validation);
+	const showsPlayers = $derived(visible.some(([mid]) => index.markets[mid].family === 'I'));
 </script>
 
 <h2 class="sr-only">Markets</h2>
@@ -71,6 +72,16 @@
 	</div>
 	<p class="muted small" role="status">{q ? `${visible.length} market${visible.length === 1 ? '' : 's'} match “${q}”` : ''}</p>
 </div>
+
+{#if showsPlayers}
+	<div class="notice experimental">
+		<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5" /><path d="M8 7.2v4" /><circle cx="8" cy="4.8" r=".6" fill="currentColor" /></svg>
+		<p>
+			<strong>Experimental.</strong> Player markets use each player’s recent share of his club’s goals, shots and assists. Lineups, injuries and suspensions are not known, so a player who does not play still counts as a loss
+			when the match is scored. Treat these as rough guides.
+		</p>
+	</div>
+{/if}
 
 <div class="markets">
 	{#each visible as [mid, lines] (mid)}

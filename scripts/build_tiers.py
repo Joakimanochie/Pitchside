@@ -34,8 +34,9 @@ def summarise(rows: pd.DataFrame, label: str) -> pd.DataFrame:
 
 def main() -> None:
     df = pd.read_csv(SRC, parse_dates=["date"])
-    if Path(COUNTS).exists():
-        df = pd.concat([df, pd.read_csv(COUNTS, parse_dates=["date"])], ignore_index=True)
+    for extra in (COUNTS, *sorted(str(p) for p in Path("data/raw").glob("player_dataset_*.csv.gz"))):   # F-H and the experimental player markets (I), when present
+        if Path(extra).exists():
+            df = pd.concat([df, pd.read_csv(extra, parse_dates=["date"])], ignore_index=True)
     df["line"] = df["line"].astype(float)
     cut = df["date"].sort_values().iloc[int(len(df) * 0.6)]
     fit, test = df[df["date"] < cut], df[df["date"] >= cut]

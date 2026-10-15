@@ -308,3 +308,6 @@ td strong { font-weight: 600; }
 .res-tag.won { background-color: var(--ink); color: #fff; box-shadow: none; }
 .res-tag.returned { box-shadow: inset 0 0 0 1.5px var(--line-strong); color: var(--ink-2); font-weight: 500; }
 h2.sr-only { font-size: 1.6rem; line-height: 1.2; }
+
+.team-tag { display: inline-block; margin-left: .45rem; font-size: .72rem; font-weight: 500; color: var(--ink-3); }
+.notice.experimental { margin: 0 0 1rem; }

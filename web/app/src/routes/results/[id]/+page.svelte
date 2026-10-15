@@ -7,7 +7,7 @@
 	let { data }: PageProps = $props();
 	const r = $derived(data.result);
 	const index = $derived(data.index);
-	const ctx = $derived({ home: r.home, away: r.away });
+	const ctx = $derived({ home: r.home, away: r.away, players: r.players });
 	const word = { home: 'Home win', draw: 'Draw', away: 'Away win' } as const;
 	const statRows = $derived(
 		(

@@ -15,7 +15,7 @@ Families A to E are priced from one simulation so they agree with each other; F 
 | F. Corners | 7 | Negative binomial count model (model line `counts-nb-0.1.0`) | Team corners from football-data |
 | G. Cards | 7 | Same | Yellow plus red cards |
 | H. Shots and shots on target | 10 | Same | Team shots and shots on target |
-| I. Players | not built | | |
+| I. Players (experimental) | 4 | Each player's recent share of his club's goals, shots, shots on target and assists, scaled by the goals model's expected goals (model line `players-0.1.0`) | The player's own counts from Understat shot events |
 
 "Verified goal minutes" means Understat's goals add up to the real full-time and half-time scores. A match that fails that
 check keeps its goal-minute markets as "not scorable" and is never settled from doubtful data.
@@ -40,13 +40,16 @@ check keeps its goal-minute markets as "not scorable" and is never settled from 
   (corners, cards) and a range (corners, cards). All lines are half lines so no stake is returned. Full-time only: football-data records match totals, not halves.
   Held-out skill over how often each thing usually happens: corners +3.6%, cards +2.6%, shots and shots on target +8.4% (`scripts/backtest_counts.py`, `docs/goals-model-report.md`).
 
+- **I (experimental)**: anytime goalscorer, anytime assist, player shots over 0.5/1.5/2.5, player shots on target over 0.5/1.5. One selection per player, so selections of a market do not add to 1 and no pick is flagged.
+  Only players with a meaningful chance are priced (up to about a dozen per club). Settled from the shot events; a player who took no shot counts as a loss even if he did not play (bookmakers would void it).
+
 ## Not built yet
 
 - **A**: Over/Under - Early Goals (needs a minute parameter we have not confirmed), full-time Multigoals (home, away, match), Correct Score [0:0] variant.
 - **B**: HT/FT correct score, 1st-half and 2nd-half "1st Goal", first-half goal bounds and excluded goals.
 - **E**: HT/FT with exact goals.
 - **F-H**: first and last corner, half-by-half corners and cards, player to be carded, posts and crossbars, offsides, tackles, team assists, substitutions: no data source for them in our feeds.
-- **I players**: not started (Phase 6, needs lineups).
+- **I players**: first/last goalscorer, player to be carded, tackles, fouls won, player goals as a count line: no data or no calibrated approach yet. Lineups are not used at all.
 
 ## Rules we settled on where the site's text was ambiguous
 

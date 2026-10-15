@@ -42,7 +42,7 @@
 			{#each rows as [sel, p, pick, tier, res] (sel)}
 				<li class="sel" class:is-pick={pick}>
 					<div class="sel-top">
-						<span class="sel-name">{selectionLabel(mid, current, sel, ctx)}{#if pick}<span class="pick-tag">Pick</span>{/if}{#if showResults && (res === 0 || res === 1)}<span class="res-tag" class:won={res === 1}>{res === 1 ? 'Won' : 'Lost'}</span>{:else if showResults && res === 2}<span class="res-tag returned">Stake returned</span>{/if}<ConfBars {tier} /></span>
+						<span class="sel-name">{selectionLabel(mid, current, sel, ctx)}{#if meta.family === 'I' && ctx.players?.[sel]}<span class="team-tag">{ctx.players[sel] === 'home' ? ctx.home : ctx.away}</span>{/if}{#if pick}<span class="pick-tag">Pick</span>{/if}{#if showResults && (res === 0 || res === 1)}<span class="res-tag" class:won={res === 1}>{res === 1 ? 'Won' : 'Lost'}</span>{:else if showResults && res === 2}<span class="res-tag returned">Stake returned</span>{/if}<ConfBars {tier} /></span>
 						<span class="sel-p">{pct1(p)}</span>
 						<span class="sel-fair" title="Fair odds: 1 divided by the probability">{fair(p)}</span>
 					</div>

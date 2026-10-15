@@ -4,7 +4,12 @@ import pandas as pd
 import pytest
 
 from pitchside.db.teams import load_aliases, seed_leagues
-from pitchside.ingest.understat_goals import assign_periods, credited_goals, load_goals
+from pitchside.ingest.understat_goals import (
+    assign_periods,
+    credited_goals,
+    load_goals,
+    load_shots,
+)
 
 SCHEDULE = pd.DataFrame({"game_id": [1], "home_team": ["Arsenal"], "away_team": ["Leeds"]})
 
@@ -127,3 +132,26 @@ def test_penalties_are_recognised_by_xg_when_the_situation_is_missing(db):
     load_goals(db, "EPL", 2026, ev, SCHEDULE)
     assert db.execute("SELECT event_type FROM match_events WHERE match_id = %s ORDER BY minute", (mid,)).fetchall() == [
         ("penalty_goal",), ("goal",)]
+
+
+def test_every_shot_is_stored_with_player_assist_and_xg_even_when_goals_do_not_add_up(db):
+    mid = add_match(db, "Arsenal", "Leeds United", (2, 0), (1, 0))      # the goals below would fail verification, the shots stay valid
+    ev = events(("Arsenal", "Goal", 10, "A"), ("Leeds", "Saved Shot", 30, "B"), ("Arsenal", "Missed Shot", 60, "C"))
+    ev.loc[0, "assist_player"] = "D"
+    out = load_shots(db, "EPL", 2026, ev, SCHEDULE)
+    assert out == {"matches": 1, "shots": 3}
+    rows = db.execute("SELECT player_name, assist_name, result, (SELECT canonical_name FROM teams WHERE id = team_id), xg FROM shot_events "
+                      "WHERE match_id = %s ORDER BY minute", (mid,)).fetchall()
+    assert [(r[0], r[1], r[2], r[3]) for r in rows] == [("A", "D", "Goal", "Arsenal"), ("B", None, "Saved Shot", "Leeds United"), ("C", None, "Missed Shot", "Arsenal")]
+    assert rows[0][4] == pytest.approx(0.2)
+
+
+def test_loading_shots_twice_does_not_duplicate_and_unfinished_matches_are_skipped(db):
+    mid = add_match(db, "Arsenal", "Leeds United", (1, 0), (1, 0))
+    ev = events(("Arsenal", "Goal", 20, "A"))
+    load_shots(db, "EPL", 2026, ev, SCHEDULE)
+    load_shots(db, "EPL", 2026, ev, SCHEDULE)
+    assert db.execute("SELECT count(*) FROM shot_events WHERE match_id = %s", (mid,)).fetchone()[0] == 1
+    db.execute("DELETE FROM shot_events")
+    db.execute("UPDATE matches SET status = 'scheduled', ft_home = NULL, ft_away = NULL, ht_home = NULL, ht_away = NULL")
+    assert load_shots(db, "EPL", 2026, ev, SCHEDULE) == {"matches": 0, "shots": 0}
