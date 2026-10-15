@@ -2,6 +2,7 @@
 	import '../app.css';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
+	import { afterNavigate } from '$app/navigation';
 	import { clock } from '#lib/time.svelte.js';
 	import type { LayoutProps } from './$types';
 
@@ -15,6 +16,26 @@
 
 	// Pages are built once a day. If the daily job has silently stopped, say so rather than show old numbers as current.
 	let stale = $state(false);
+	// Count page views (first-party, no cookies; see the privacy notice). Failures are ignored: counting must never affect the page.
+	let first = true;
+	afterNavigate(() => {
+		const path = location.pathname;
+		if (path.startsWith('/admin')) return;
+		const q = new URLSearchParams(location.search);
+		const body = JSON.stringify({
+			path,
+			referrer: first ? document.referrer : '',
+			utm: q.get('utm_source') ?? q.get('ref'),
+			device: window.matchMedia('(max-width: 760px)').matches ? 'mobile' : 'desktop'
+		});
+		first = false;
+		try {
+			void fetch('/api/track', { method: 'POST', headers: { 'content-type': 'application/json' }, body, keepalive: true }).catch(() => {});
+		} catch {
+			/* ignore */
+		}
+	});
+
 	onMount(() => {
 		clock.local = true;
 		stale = Date.now() - new Date(data.index.generated_at).getTime() > 36 * 3600 * 1000;

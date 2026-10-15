@@ -6,9 +6,6 @@ declare global {
 		// interface Locals {}
 		// interface PageData {}
 		// interface PageState {}
-		interface Platform {
-			env?: { DB?: { prepare(sql: string): { bind(...v: unknown[]): { run(): Promise<unknown> } } } };
-		}
 	}
 }
 

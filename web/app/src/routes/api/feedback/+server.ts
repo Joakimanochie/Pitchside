@@ -1,11 +1,12 @@
 import { json } from '@sveltejs/kit';
+import { getDb } from '#lib/server/db.js';
 import type { RequestHandler } from './$types';
 
 // The one dynamic route in an otherwise prerendered site: stores "was this useful?" feedback in Cloudflare D1.
 export const prerender = false;
 
-export const POST: RequestHandler = async ({ request, platform }) => {
-	const db = platform?.env?.DB;
+export const POST: RequestHandler = async ({ request }) => {
+	const db = await getDb();
 	if (!db) return json({ ok: false, error: 'Feedback is not available here.' }, { status: 503 });
 
 	let body: { match_id?: unknown; page?: unknown; useful?: unknown; comment?: unknown };
