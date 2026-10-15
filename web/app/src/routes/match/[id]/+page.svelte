@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ConfBars from '#lib/components/ConfBars.svelte';
+	import KeyNumbers from '#lib/components/KeyNumbers.svelte';
 	import MarketBoard from '#lib/components/MarketBoard.svelte';
 	import OddsCompare from '#lib/components/OddsCompare.svelte';
 	import Story from '#lib/components/Story.svelte';
@@ -47,6 +48,8 @@
 			<p class="span">Lineups, injuries and suspensions are not used yet. The model knows past scores, how goals split between the halves, and when in a match goals tend to happen.</p>
 		</div>
 	</section>
+
+	<KeyNumbers preds={match.preds} {index} {ctx} />
 
 	<OddsCompare {match} {index} />
 
