@@ -9,7 +9,7 @@
 	const d = $derived(data.index);
 	const L = $derived(d.live);
 	const MIN_LIVE = 30;
-	const lineName = (v: string) => (v.startsWith('goals-') ? 'Goals, halves, timing and combinations' : v.startsWith('counts-') ? 'Corners, cards, shots, shots on target' : v.startsWith('players-') ? (v === 'players-0.2.0' ? 'Player markets, with the announced lineup' : 'Player markets (experimental)') : '');
+	const lineName = (v: string) => (v.startsWith('goals-') ? 'Goals, halves, timing and combinations' : v.startsWith('counts-') ? 'Corners, cards, shots, shots on target' : v.startsWith('players-') ? (v === 'players-0.2.0' || v === 'players-0.4.0' ? 'Player markets, with the announced lineup' : 'Player markets (experimental)') : '');
 	const v = $derived(d.validation);
 	const C = $derived(d.confidence.validation);
 	const stored = $derived(d.fixtures.length * 945);

@@ -19,6 +19,7 @@ import export_common as base
 
 from pitchside.confidence import RATED_LEAGUES, TIERS, UNRATED, load_rules, tier_for
 from pitchside.db.migrate import _load_env
+from pitchside.markets.players import LOG_STATS
 from pitchside.markets.registry import MARKETS
 from pitchside.odds.compare import demargin, edge, expected_value, overround
 
@@ -100,6 +101,10 @@ def player_sides(conn: psycopg.Connection, preds: dict, home_id: int, away_id: i
             "SELECT DISTINCT ON (s.player_name) s.player_name, s.team_id FROM shot_events s JOIN matches m ON m.id = s.match_id "
             "WHERE s.team_id IN (%s, %s) AND s.player_name = ANY(%s) ORDER BY s.player_name, m.match_date DESC", (home_id, away_id, names)):
         out[name] = "home" if team_id == home_id else "away"
+    for name, team_id in conn.execute(      # players of the card and foul markets are named as ESPN spells them
+            "SELECT DISTINCT ON (l.player_name) l.player_name, l.team_id FROM player_match_log l JOIN matches m ON m.id = l.match_id "
+            "WHERE l.team_id IN (%s, %s) AND l.player_name = ANY(%s) ORDER BY l.player_name, m.match_date DESC", (home_id, away_id, names)):
+        out.setdefault(name, "home" if team_id == home_id else "away")
     return out
 
 
@@ -133,7 +138,7 @@ def export_results(conn: psycopg.Connection, rules: dict, out_dir: Path) -> list
                 "WHERE p.match_id = %s AND p.run_id = ANY(%s) ORDER BY p.id", (mid, [r[0] for r in runs.values()])):
             if market not in MARKETS:
                 continue
-            if MARKETS[market].family == 'I' and league not in RATED_LEAGUES:
+            if MARKETS[market].family == 'I' and MARKETS[market].player_stat not in LOG_STATS and league not in RATED_LEAGUES:
                 continue
             tier = UNRATED if league not in RATED_LEAGUES else TIERS.index(tier_for(rules, market, MARKETS[market].family, float(prob)))
             outcome = OUTCOME.get(result, 3)

@@ -306,3 +306,19 @@ So carrying a rating down a league helps a little, but carrying it up hurts: one
 | Premier League, all, from Aug 2024 (820) | 1.0230 | 1.0237 | 1.0241 | 1.0247 |
 
 The early gain for clubs coming down to the Championship (0.019 better with full carry) is gone on later matches (0.0003), and for clubs going up carrying more is worse. Over/under 2.5 barely moves. The effect is not stable, so it is not adopted: production keeps one fit per league, and the earlier result in `pyramid` above is explained by the 2022-24 seasons alone. Consequence for the Championship: a club just relegated is rated on its Championship matches only, which is as good as anything we can validate.
+
+## Card timing, player cards and player fouls (2026-10-16)
+
+Data: ESPN match summaries (cards with minutes, each player's fouls and cards) for 6,300 verified matches from 2023/24 on (a match is used only when the cards add up to the real card counts: about nine in ten).
+
+**Card timing** (`models/cardtiming.py`, `scripts/backtest_cardtiming.py`): the cards count model's joint distribution of both sides' cards, split into halves with the typical first-half share (about 40%) and a minute profile. Walk-forward from February 2024, 5,210 matches, calibration is close in the middle bands (predicted 0.498, happened 0.497 in 0.4-0.6; the 0.9-1.0 band is 0.933 against 0.899). But the skill over simply using how often each thing happens is about zero: 1st-half cards +0.3%, 2nd-half -0.3%, half with most cards -0.1%, a card by a minute +0.2%, first card team +1.0%. The model reproduces the typical pattern and adds little about a specific match, so these markets rate Low.
+
+**Player cards and fouls** (`models/players.py`, `scripts/backtest_player_cards.py`): each player's own recent rate per club match over the club's last 30 logged matches (recent ones weigh more); for cards also scaled by the club's expected cards in the match (cards count model) and pulled 20% toward the average rate (a high rate regresses). Settings chosen on matches before 2026-01-01, scored on matches after (about 48,000 to 74,000 player-matches each):
+
+| Held-out | Skill over the same chance for every player |
+|---|---|
+| To be carded | +2.0% (calibrated except above 20%, where 22% was predicted and 15% happened) |
+| Fouls committed 1+ / 2+ | +10.7% / +6.0% |
+| Fouls won 1+ / 2+ / 3+ | +11.9% / +9.7% / +8.8% |
+
+Confidence ratings from the same rule as the other families: fouls High, to be carded Medium, the card timing markets Low. The checked ordering High > Medium > Low still holds (skill +9.4%, +4.7%, +1.1% on 1,917 held-out matches).

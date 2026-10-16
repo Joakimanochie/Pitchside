@@ -24,8 +24,10 @@ from pitchside.db.predictions import (
     write_predictions,
 )
 from pitchside.db.teams import load_aliases, seed_leagues
+from pitchside.ingest.espn_log import ingest_log
 from pitchside.ingest.fixtures import fetch_fixtures, upsert_fixtures
 from pitchside.ingest.footballdata import current_season, load_seasons
+from pitchside.ingest.lineups import match_names
 from pitchside.ingest.load_matches import load_footballdata
 from pitchside.leagues import LEAGUES
 from pitchside.markets.base import price as price_market
@@ -33,14 +35,21 @@ from pitchside.markets.counts import MARKETS as COUNT_MARKETS
 from pitchside.markets.counts import STATS as COUNT_STATS
 from pitchside.markets.goals import price_match
 from pitchside.markets.players import MARKETS as PLAYER_MARKETS
-from pitchside.markets.registry import MARKETS
+from pitchside.markets.registry import CARD_TIMING_MARKETS, MARKETS
+from pitchside.models.cardtiming import CardProfile, price_card_timing
 from pitchside.models.counts import COUNT_PARAMS, CountModel
 from pitchside.models.dixon_coles import DixonColes
 from pitchside.models.players import (
+    LOG_PARAMS,
     PLAYER_PARAMS,
+    LogRates,
     TeamRates,
+    apply_lineup,
+    apply_lineup_log,
     at_least,
     goal_shares,
+    log_rates,
+    shrunk_card_rate,
     team_rates,
 )
 from pitchside.odds.footballdata_fixtures import FootballDataFixtures
@@ -54,8 +63,10 @@ MODEL_VERSION = "goals-dc-0.3.0"   # 0.1.0 priced family A only; 0.2.0 adds the 
 FEATURE_VERSION = "scores-only-v1"
 COUNT_MODEL_VERSION = "counts-nb-0.1.0"   # corners, cards, shots and shots on target: its own model line, so adding it never reopens goals predictions
 COUNT_FEATURE_VERSION = "team-stats-v1"
-PLAYER_MODEL_VERSION = "players-0.1.0"   # experimental: anytime goalscorer, shots, shots on target, assists per player; no lineups
-PLAYER_FEATURE_VERSION = "understat-shots-v1"
+PLAYER_MODEL_VERSION = "players-0.3.0"   # experimental: goals, shots, shots on target, assists, cards and fouls per player; no lineups (0.1.0 had no cards or fouls)
+PLAYER_FEATURE_VERSION = "understat-shots+espn-log-v1"
+CARD_TIMING_VERSION = "cardtime-0.1.0"   # cards by half, first card, card by a minute: from the cards count model plus the share and timing of past cards
+CARD_TIMING_FEATURE_VERSION = "team-stats+espn-log-v1"
 MODEL_PARAMS = {"half_life_days": 730, "ridge": 2.0, "level_window_days": 240, "level_shrink": 60, "total_compression": 0.7, "max_goals": 10, "n_sims": 50_000, "split": "empirical-table", "timing": "pooled-profile"}
 N_SIMS = 50_000
 def make_model() -> DixonColes:
@@ -246,10 +257,130 @@ def player_rows(rates: TeamRates, club_goals: float) -> list[dict]:
     return out
 
 
+def fit_card_profile(conn: psycopg.Connection) -> CardProfile | None:
+    """First-half share and minute profile of cards from every verified match log (all leagues pooled). None when there are too few cards."""
+    rows = conn.execute("SELECT c.period, c.minute FROM card_events c JOIN matches m ON m.id = c.match_id WHERE m.source_ids ->> 'espn_log' = 'true'").fetchall()
+    if len(rows) < 500:
+        return None
+    a = np.array(rows, dtype=int)
+    return CardProfile.fit(a[:, 0], a[:, 1])
+
+
+def predict_card_timing(conn: psycopg.Connection, league_id: str, as_of: date, days: int, force: bool = False) -> dict:
+    """Price the card timing markets for fixtures in the next `days` days, once per match per model version."""
+    now = datetime.now(UTC)
+    not_yet = "" if force else ("AND NOT EXISTS (SELECT 1 FROM predictions p JOIN prediction_runs r ON r.id = p.run_id "
+                                "WHERE p.match_id = m.id AND r.run_type = 'weekly' AND r.model_version_id = %s) ")
+    params = [league_id, as_of, as_of + timedelta(days=days), now] + ([] if force else [CARD_TIMING_VERSION])
+    fixtures = conn.execute(
+        "SELECT m.id, th.canonical_name, ta.canonical_name FROM matches m JOIN teams th ON th.id = m.home_team_id JOIN teams ta ON ta.id = m.away_team_id "
+        "WHERE m.league_id = %s AND m.status = 'scheduled' AND m.match_date >= %s AND m.match_date < %s AND (m.kickoff IS NULL OR m.kickoff > %s) " + not_yet
+        + "ORDER BY m.kickoff, m.id", params).fetchall()
+    if not fixtures:
+        return {"run_id": None, "matches": 0, "predictions": 0, "note": "no upcoming fixtures in the window"}
+    profile = fit_card_profile(conn)
+    model = club_card_model(conn, league_id, as_of)
+    if profile is None or model is None:
+        return {"run_id": None, "matches": 0, "predictions": 0, "note": "too few logged cards to price card timing yet"}
+    seed_markets(conn)
+    ensure_model_version(conn, CARD_TIMING_VERSION, "Card timing: cards by half, first card, card by a minute", {"cards": COUNT_PARAMS["cards"], "profile": profile.to_dict()})
+    run_id = create_run(conn, "weekly", CARD_TIMING_VERSION, CARD_TIMING_FEATURE_VERSION, datetime.combine(as_of, time.min, tzinfo=UTC),
+                        notes=f"{league_id}, {len(fixtures)} fixtures, window {as_of} + {days} days, card timing")
+    total = 0
+    for match_id, home, away in fixtures:
+        rows = price_card_timing(model.count_matrix(home, away), profile, CARD_TIMING_MARKETS)
+        total += write_predictions(conn, run_id, match_id, rows, MARKETS, {})
+        write_context(conn, run_id, match_id, {"first_half_share": round(profile.first_half_share, 4), "cards_logged": profile.n_cards})
+    conn.commit()
+    return {"run_id": run_id, "matches": len(fixtures), "predictions": total}
+
+
+def load_log_rates(conn: psycopg.Connection, team_id: int, before: date) -> LogRates | None:
+    """Recency-weighted fouls and cards of a club's players over its last matches with a verified ESPN log. None when it has too few."""
+    ids = [r[0] for r in conn.execute(
+        "SELECT m.id FROM matches m WHERE m.status = 'finished' AND m.match_date < %s AND (m.home_team_id = %s OR m.away_team_id = %s) "
+        "AND m.source_ids ->> 'espn_log' = 'true' ORDER BY m.match_date DESC LIMIT %s", (before, team_id, team_id, LOG_PARAMS["n_matches"]))]
+    if len(ids) < 8:
+        return None
+    rows = conn.execute("SELECT match_id, player_name, yellow + red, fouls_committed, fouls_suffered FROM player_match_log WHERE match_id = ANY(%s) AND team_id = %s", (ids, team_id)).fetchall()
+    log = pd.DataFrame(rows, columns=["match_id", "player", "cards", "fouls", "fouled"])
+    return log_rates(log, ids, half_life_matches=LOG_PARAMS["half_life_matches"])
+
+
+def log_player_rows(rates: LogRates, club_cards: float) -> list[dict]:
+    """Probabilities for one club's players being carded and committing or winning fouls (see models/players.py). Only players with a meaningful chance are priced."""
+    out = []
+
+    def add(market, line, player, p):
+        out.append({"market_id": market, "line": line, "selection": player, "probability": float(p), "p_win": float(p), "p_lose": float(1 - p), "p_push": 0.0})
+
+    cfg = LOG_PARAMS["cards"]
+    lam = (cfg["scale"] * shrunk_card_rate(rates, club_cards, cfg["shrink"], cfg["prior"])).sort_values(ascending=False)
+    for player, mean in lam.head(14).items():
+        p = float(at_least(float(mean), 1, cfg["dispersion"]))
+        if p >= 0.03:
+            add("player_carded", None, player, p)
+    for stat, column, market in (("fouls", "fouls", "player_fouls"), ("fouled", "fouled", "player_fouled")):
+        cfg = LOG_PARAMS[stat]
+        mean = cfg["scale"] * rates.players[column] / rates.weight
+        for player in mean.sort_values(ascending=False).head(12).index:
+            for line in PLAYER_MARKETS[market].lines:
+                p = float(at_least(float(mean[player]), int(line + 0.5), cfg["dispersion"]))
+                if p >= 0.05:
+                    add(market, line, player, p)
+    return out
+
+
+def club_card_model(conn: psycopg.Connection, league_id: str, as_of: date) -> CountModel | None:
+    """The cards count model of a league (for the clubs' expected cards in a coming match); None when the league has too little data."""
+    try:
+        history = load_count_history(conn, league_id)
+        data = history.assign(count_home=history["cards_h"], count_away=history["cards_a"])
+        return CountModel(half_life_days=COUNT_PARAMS["cards"]["half_life_days"], ridge=COUNT_PARAMS["cards"]["ridge"], max_count=COUNT_STATS["cards"]["max"]).fit(data, as_of=as_of)
+    except ValueError:
+        return None
+
+
+def match_player_rows(conn: psycopg.Connection, league_id: str, match_id: int, home_id: int, away_id: int, as_of: date, cards: CountModel | None,
+                      lineup: dict | None = None) -> list[dict]:
+    """Every player price for one match: shot-based markets (rated leagues only, from the goals model's expected goals) and card/foul markets (from the ESPN log).
+    `lineup` maps a team id to (starters, bench) as ESPN spells them; None when the lineup is not known (the weekly run)."""
+    rows: list[dict] = []
+    ctx = conn.execute(
+        "SELECT c.context FROM prediction_context c JOIN prediction_runs r ON r.id = c.run_id WHERE c.match_id = %s AND r.model_version_id LIKE 'goals-%%' "
+        "ORDER BY r.created_at DESC LIMIT 1", (match_id,)).fetchone()
+    team_name = dict(conn.execute("SELECT id, canonical_name FROM teams WHERE id IN (%s, %s)", (home_id, away_id)).fetchall())
+    card_mean = cards.means(team_name[home_id], team_name[away_id]) if cards is not None else (None, None)
+    # a player who moved between these two clubs has shots for both: he belongs to the club he shot for most recently
+    latest = dict(conn.execute(
+        "SELECT DISTINCT ON (s.player_name) s.player_name, s.team_id FROM shot_events s JOIN matches m ON m.id = s.match_id "
+        "WHERE s.team_id IN (%s, %s) AND s.player_name IS NOT NULL ORDER BY s.player_name, m.match_date DESC, m.id DESC", (home_id, away_id)).fetchall())
+    # likewise for the players of the match log: a player with rows for both clubs belongs to the one he played for most recently
+    latest_log = dict(conn.execute(
+        "SELECT DISTINCT ON (l.player_name) l.player_name, l.team_id FROM player_match_log l JOIN matches m ON m.id = l.match_id "
+        "WHERE l.team_id IN (%s, %s) ORDER BY l.player_name, m.match_date DESC, m.id DESC", (home_id, away_id)).fetchall())
+    for team_id, side, expect_cards in ((home_id, "home", card_mean[0]), (away_id, "away", card_mean[1])):
+        if ctx is not None and league_id in RATED_LEAGUES:
+            rates = load_team_rates(conn, team_id, as_of)
+            if rates is not None:
+                rates.players = rates.players[[latest.get(name, team_id) == team_id for name in rates.players.index]]
+                if lineup and team_id in lineup:
+                    known = list(rates.players.index)
+                    rates = apply_lineup(rates, match_names(known, lineup[team_id][0]), match_names(known, lineup[team_id][1]))
+                rows.extend(player_rows(rates, float(ctx[0]["lambda_home" if side == "home" else "lambda_away"])))
+        log = load_log_rates(conn, team_id, as_of)
+        if log is not None:
+            log.players = log.players[[latest_log.get(name, team_id) == team_id for name in log.players.index]]
+        if log is not None and expect_cards is not None:
+            if lineup and team_id in lineup:
+                log = apply_lineup_log(log, set(lineup[team_id][0]), set(lineup[team_id][1]))
+            rows.extend(log_player_rows(log, float(expect_cards)))
+    return rows
+
+
 def predict_players(conn: psycopg.Connection, league_id: str, as_of: date, days: int, force: bool = False) -> dict:
-    """Price player markets (experimental) for fixtures in the next `days` days from each club's recent shot data and the goals model's expected goals."""
-    if league_id not in RATED_LEAGUES:      # shot data (Understat) covers only the five rated leagues; a promoted or relegated club's old shots would be stale
-        return {"run_id": None, "matches": 0, "predictions": 0, "note": "no player data for this league"}
+    """Price player markets (experimental) for fixtures in the next `days` days: shots, goals and assists from each club's recent shot data and the goals model's
+    expected goals (the five leagues Understat covers), and cards and fouls from the clubs' recent ESPN match logs (every league)."""
     now = datetime.now(UTC)
     not_yet = "" if force else ("AND NOT EXISTS (SELECT 1 FROM predictions p JOIN prediction_runs r ON r.id = p.run_id "
                                 "WHERE p.match_id = m.id AND r.run_type = 'weekly' AND r.model_version_id = %s) ")
@@ -260,32 +391,25 @@ def predict_players(conn: psycopg.Connection, league_id: str, as_of: date, days:
     if not fixtures:
         return {"run_id": None, "matches": 0, "predictions": 0, "note": "no upcoming fixtures in the window"}
     seed_markets(conn)
-    ensure_model_version(conn, PLAYER_MODEL_VERSION, "Experimental player layer: recent share of club goals, shots, shots on target and assists", PLAYER_PARAMS)
+    ensure_model_version(conn, PLAYER_MODEL_VERSION, "Experimental player layer: goals, shots, shots on target, assists, cards and fouls per player", {**PLAYER_PARAMS, "log": LOG_PARAMS})
     run_id = create_run(conn, "weekly", PLAYER_MODEL_VERSION, PLAYER_FEATURE_VERSION, datetime.combine(as_of, time.min, tzinfo=UTC),
                         notes=f"{league_id}, {len(fixtures)} fixtures, window {as_of} + {days} days, players")
+    cards = club_card_model(conn, league_id, as_of)
     total = matches = 0
     for match_id, _kickoff, home_id, away_id in fixtures:
-        ctx = conn.execute(
-            "SELECT c.context FROM prediction_context c JOIN prediction_runs r ON r.id = c.run_id WHERE c.match_id = %s AND r.model_version_id LIKE 'goals-%%' "
-            "ORDER BY r.created_at DESC LIMIT 1", (match_id,)).fetchone()
-        if ctx is None:                 # the club goals come from the goals model: no goals prediction, no player prices
-            continue
-        rows = []
-        # a player who moved between these two clubs has shots for both: he belongs to the club he shot for most recently
-        latest = dict(conn.execute(
-            "SELECT DISTINCT ON (s.player_name) s.player_name, s.team_id FROM shot_events s JOIN matches m ON m.id = s.match_id "
-            "WHERE s.team_id IN (%s, %s) AND s.player_name IS NOT NULL ORDER BY s.player_name, m.match_date DESC, m.id DESC", (home_id, away_id)).fetchall())
-        for team_id, lam in ((home_id, ctx[0]["lambda_home"]), (away_id, ctx[0]["lambda_away"])):
-            rates = load_team_rates(conn, team_id, as_of)
-            if rates is not None:
-                rates.players = rates.players[[latest.get(name, team_id) == team_id for name in rates.players.index]]
-                rows.extend(player_rows(rates, float(lam)))
+        rows = match_player_rows(conn, league_id, match_id, home_id, away_id, as_of, cards)
         if rows:
             total += write_predictions(conn, run_id, match_id, rows, MARKETS, {})
             write_context(conn, run_id, match_id, {"players_priced": len({r["selection"] for r in rows}), "params": "see model version"})
             matches += 1
     conn.commit()
     return {"run_id": run_id, "matches": matches, "predictions": total}
+
+
+def ingest_match_log(conn: psycopg.Connection, league_id: str) -> dict:
+    """Cards with minutes and players' fouls and cards for this league's matches that finished recently (ESPN), verified against the real card counts."""
+    today = datetime.now(UTC).date()
+    return ingest_log(conn, league_id, LEAGUES[league_id].espn_code, since=today - timedelta(days=45), retry_from=today - timedelta(days=3))
 
 
 def ingest_odds(conn: psycopg.Connection) -> dict:
@@ -322,12 +446,15 @@ def run_leagues(conn: psycopg.Connection, league_ids: list[str], days: int = 8, 
             attempt(lid, "results", ingest_results, conn, lid)
         for lid in league_ids:      # goal minutes for matches that just finished, before settling needs them
             attempt(lid, "goal_minutes", ingest_goal_minutes, conn, lid)
+        for lid in league_ids:      # likewise cards with minutes and players' fouls and cards
+            attempt(lid, "match_log", ingest_match_log, conn, lid)
     attempt("settle", "all", settle_all, conn)  # one global pass: settles every league's finished matches
     today = datetime.now(UTC).date()
     for lid in league_ids:
         attempt(lid, "fixtures", plan_fixtures, conn, lid, today, days)
         attempt(lid, "predictions", predict_week, conn, lid, today, days, force)
         attempt(lid, "counts", predict_counts, conn, lid, today, days, force)
+        attempt(lid, "card_timing", predict_card_timing, conn, lid, today, days, force)
         attempt(lid, "players", predict_players, conn, lid, today, days, force)
     attempt("odds", "all", ingest_odds, conn)  # after fixtures exist, so the prices find their matches; one file covers every league
     return report, errors

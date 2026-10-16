@@ -105,3 +105,55 @@ def apply_lineup(rates: TeamRates, starters: set[str], bench: set[str]) -> TeamR
     before, after = players.sum(), scaled.sum()
     boost = (before / after.where(after > 0)).fillna(1.0).clip(upper=MAX_BOOST).clip(lower=1.0)
     return TeamRates(weight=rates.weight, team=rates.team, players=scaled.mul(boost, axis=1))
+
+
+# ---- cards and fouls, from the ESPN match log (no shot data needed) ---------------------------------------------------------------------
+# Chosen on matches before 2026-01-01 (scripts/backtest_player_cards.py) and then frozen, as for the shot-based markets. Cards: a player's own rate is pulled
+# 20% of the way toward the average rate (a player with a high rate is carded less often than that rate says), and scaled for rotation and injuries.
+LOG_PARAMS = {
+    "n_matches": 30, "half_life_matches": 10.0,
+    "cards": {"scale": 0.8, "dispersion": 0.0, "shrink": 0.2, "prior": 0.117},
+    "fouls": {"scale": 0.9, "dispersion": 0.827}, "fouled": {"scale": 0.9, "dispersion": 0.804},
+}
+
+
+@dataclass
+class LogRates:
+    """Recency-weighted fouls and cards of a club's players over its last matches (the club's matches with a verified log)."""
+    weight: float                 # sum of the match weights
+    team_cards: float             # the club's own cards, weighted: "per club match" is this divided by weight
+    players: pd.DataFrame         # index player; columns cards, fouls, fouled (weighted counts)
+
+
+def log_rates(log: pd.DataFrame, recent_matches: list[int], half_life_matches: float = 10.0) -> LogRates:
+    """log: this club's rows of player_match_log, columns match_id, player, cards (yellow + red), fouls, fouled.
+    recent_matches: the club's last matches with a log, newest first. The k-th newest counts 0.5 ** (k / half_life_matches)."""
+    w = {m: 0.5 ** (k / half_life_matches) for k, m in enumerate(recent_matches)}
+    d = log[log["match_id"].isin(w)].copy()
+    d["w"] = d["match_id"].map(w)
+    for c in ("cards", "fouls", "fouled"):
+        d[c] = d[c] * d["w"]
+    players = d.groupby("player")[["cards", "fouls", "fouled"]].sum()
+    return LogRates(weight=float(sum(w.values())), team_cards=float(d["cards"].sum()), players=players)
+
+
+def card_rate(rates: LogRates, club_expected_cards: float) -> pd.Series:
+    """Each player's expected cards in the coming match: his recent cards per club match, scaled by how many cards the club is expected to get
+    in this match compared with its recent average (a strict referee or a derby raises everyone's)."""
+    per_match = rates.team_cards / rates.weight if rates.weight > 0 else 0.0
+    factor = club_expected_cards / per_match if per_match > 0 else 1.0
+    return rates.players["cards"] / rates.weight * factor
+
+
+def shrunk_card_rate(rates: LogRates, club_expected_cards: float, shrink: float, prior: float) -> pd.Series:
+    """card_rate pulled `shrink` of the way toward the average rate `prior`."""
+    return (1 - shrink) * card_rate(rates, club_expected_cards) + shrink * prior
+
+
+def apply_lineup_log(rates: LogRates, starters: set[str], bench: set[str]) -> LogRates:
+    """Same rule as apply_lineup: starters keep their share, named substitutes count BENCH_WEIGHT, others are out; the club's total passes on to those who play."""
+    players = rates.players
+    weight = pd.Series([1.0 if n in starters else BENCH_WEIGHT if n in bench else 0.0 for n in players.index], index=players.index)
+    scaled = players.mul(weight, axis=0)
+    boost = (players.sum() / scaled.sum().where(scaled.sum() > 0)).fillna(1.0).clip(upper=MAX_BOOST).clip(lower=1.0)
+    return LogRates(rates.weight, rates.team_cards, scaled.mul(boost, axis=1))

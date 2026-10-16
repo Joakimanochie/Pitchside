@@ -16,7 +16,7 @@ export const TABS = [
 export type TabId = (typeof TABS)[number]['id'];
 
 const MAIN_IDS = new Set(['1x2', 'double_chance', 'draw_no_bet', 'ou_total', 'btts', 'asian_handicap', 'handicap_3way']);
-export const SORT_BY_PROBABILITY = new Set(['correct_score', 'multiscores', 'player_anytime_goal', 'player_assist', 'player_shots', 'player_sot']);
+export const SORT_BY_PROBABILITY = new Set(['correct_score', 'multiscores', 'player_anytime_goal', 'player_assist', 'player_shots', 'player_sot', 'player_carded', 'player_fouls', 'player_fouled']);
 export const COLLAPSED_ROWS = 6;
 
 export const pct0 = (p: number) => `${Math.round(p * 100)}%`;
@@ -63,6 +63,9 @@ export function selectionLabel(mid: string, lineKey: string, sel: string, ctx: C
 	if ((mid.startsWith('asian_handicap') || mid.endsWith('_ah')) && line != null) return sel === 'home' ? `${home} ${signed(line)}` : `${away} ${signed(-line)}`;
 	if (mid.startsWith('handicap_3way') && line != null) return `${tokenLabel(sel, mid, ctx)} (${line < 0 ? `0:${-line}` : `${line}:0`})`;
 	if ((sel === 'over' || sel === 'under') && line != null) return `${sel === 'over' ? 'Over' : 'Under'} ${line}`;
+	if (mid === 'first_card_team') return sel === 'none' ? 'No card' : `${sel === 'home' ? home : away} first`;
+	if (mid === 'first_card_by') return sel === 'yes' ? 'Yes' : 'No';
+	if (mid === 'cards_half_most') return sel === 'equal' ? 'Equal' : `${sel} half`;
 	if (mid === 'first_goal_10' || mid === 'first_goal_15') return sel === 'none' ? 'No goal' : `${sel} min`;
 	if (mid === 'gg_ng_each_half') {
 		const [a, b] = sel.split('/');
@@ -83,6 +86,7 @@ export function lineChipLabel(mid: string, lineKey: string): string {
 	const n = Number(lineKey);
 	if (mid.startsWith('handicap_3way')) return n < 0 ? `0:${-n}` : `${n}:0`;
 	if (mid.startsWith('asian_handicap') || mid.endsWith('_ah')) return signed(n);
+	if (mid === 'first_card_by') return `by ${n}'`;
 	if (mid.startsWith('lead_by')) return `${n}+ goal${n > 1 ? 's' : ''}`;
 	if (mid.startsWith('goals_in_a_row')) return `${n}+ in a row`;
 	return String(n);

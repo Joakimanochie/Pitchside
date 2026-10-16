@@ -26,8 +26,9 @@ import psycopg
 
 from pitchside.db.migrate import _load_env
 from pitchside.markets.base import settle as settle_market
+from pitchside.markets.cardtiming import CardTimingMarket, settle_card_timing
 from pitchside.markets.counts import stat_value
-from pitchside.markets.players import PlayerMarket, settle_player
+from pitchside.markets.players import LOG_STATS, PlayerMarket, settle_player
 from pitchside.markets.record_base import RecordMarket, settle_record
 from pitchside.markets.registry import MARKETS
 from pitchside.sim.record import MatchRecord, from_goals, from_scores
@@ -70,14 +71,25 @@ def build_outcomes(conn: psycopg.Connection) -> int:
             "SELECT match_id, assist_name, count(*) FROM shot_events WHERE match_id = ANY(%s) AND result = 'Goal' AND assist_name IS NOT NULL "
             "GROUP BY match_id, assist_name", (ids,)):
         players[match_id].setdefault(name, {"goals": 0, "shots": 0, "sot": 0, "assists": 0})["assists"] = assists_n
+    logged = [r[0] for r in conn.execute("SELECT id FROM matches WHERE id = ANY(%s) AND source_ids ->> 'espn_log' = 'true'", (ids,))]
+    cards: dict[int, list] = {mid: [] for mid in logged}
+    for match_id, team_id, home_team_id, period, minute in conn.execute(
+            "SELECT c.match_id, c.team_id, m.home_team_id, c.period, c.minute FROM card_events c JOIN matches m ON m.id = c.match_id "
+            "WHERE c.match_id = ANY(%s) ORDER BY c.id", (logged,)):
+        cards[match_id].append(["home" if team_id == home_team_id else "away", period, minute])
+    log_players: dict[int, dict] = {mid: {} for mid in logged}
+    for match_id, name, yellow, red, fouls, fouled in conn.execute(
+            "SELECT match_id, player_name, yellow, red, fouls_committed, fouls_suffered FROM player_match_log WHERE match_id = ANY(%s)", (logged,)):
+        log_players[match_id][name] = {"cards": yellow + red, "fouls": fouls, "fouled": fouled}
     params = []
     for match_id, fh, fa, hh, ha, flag in matches:
         home, away = stats.get((match_id, True)), stats.get((match_id, False))
         has_minutes = flag == "true"
         record = {"ft_home": fh, "ft_away": fa, "ht_home": hh, "ht_away": ha, "home_stats": home, "away_stats": away,
-                  "goals": goals[match_id] if has_minutes else None, "players": players.get(match_id)}
+                  "goals": goals[match_id] if has_minutes else None, "players": players.get(match_id),
+                  "cards": cards.get(match_id), "log_players": log_players.get(match_id)}
         coverage = {"ft": True, "ht": hh is not None and ha is not None, "team_stats": home is not None and away is not None,
-                    "goal_minutes": has_minutes, "player_data": match_id in players}
+                    "goal_minutes": has_minutes, "player_data": match_id in players, "card_log": match_id in cards}
         params.append((match_id, json.dumps(record), json.dumps(coverage)))
     with conn.cursor() as cur:
         cur.executemany(
@@ -107,7 +119,15 @@ def _decide(row, records: dict) -> tuple[str, float | None, dict]:
     observed = {"ft_home": record["ft_home"], "ft_away": record["ft_away"]}
     coverage = coverage or {}
     try:
-        if isinstance(market, PlayerMarket):   # one player's own count, from the shot events
+        if isinstance(market, CardTimingMarket):   # cards by half, first card: from the cards of the match with their minutes
+            if record.get("cards") is None:
+                return "not_scorable", None, {"reason": "card_log_missing", **observed}
+            res = settle_card_timing(market, None if line is None else float(line), selection, record["cards"])
+        elif isinstance(market, PlayerMarket) and market.player_stat in LOG_STATS:   # a player's cards or fouls, from the ESPN match log
+            if record.get("log_players") is None:
+                return "not_scorable", None, {"reason": "card_log_missing", **observed}
+            res = settle_player(market, None if line is None else float(line), selection, record["log_players"])
+        elif isinstance(market, PlayerMarket):   # one player's own count, from the shot events
             if record.get("players") is None:
                 return "not_scorable", None, {"reason": "player_data_missing", **observed}
             res = settle_player(market, None if line is None else float(line), selection, record["players"])
@@ -145,6 +165,7 @@ def settle_predictions(conn: psycopg.Connection) -> Counter:
         "       OR (s.observed ->> 'ft_away') IS DISTINCT FROM (mo.record ->> 'ft_away') "
         "       OR ((s.observed ->> 'reason') = 'goal_minutes_unverified' AND (mo.coverage ->> 'goal_minutes') = 'true') "
         "       OR ((s.observed ->> 'reason') = 'player_data_missing' AND (mo.coverage ->> 'player_data') = 'true') "
+        "       OR ((s.observed ->> 'reason') = 'card_log_missing' AND (mo.coverage ->> 'card_log') = 'true') "
         "       OR ((s.observed ->> 'reason') = 'team_stats_missing' AND (mo.coverage ->> 'team_stats') = 'true'))) "
         "ORDER BY p.id").fetchall()
     counts: Counter = Counter()

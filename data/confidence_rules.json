@@ -808,6 +808,125 @@
    "se": 0.0395,
    "tier": "Low"
   },
+  "cards_h1_ou|0": {
+   "n": 88,
+   "skill": 0.0979,
+   "gap": 0.0255,
+   "se": 0.0311,
+   "tier": "Low"
+  },
+  "cards_h1_ou|1": {
+   "n": 7479,
+   "skill": -0.0003,
+   "gap": 0.0047,
+   "se": 0.0044,
+   "tier": "Low"
+  },
+  "cards_h1_ou|2": {
+   "n": 5211,
+   "skill": 0.0053,
+   "gap": -0.0035,
+   "se": 0.0064,
+   "tier": "Low"
+  },
+  "cards_h1_ou|3": {
+   "n": 5704,
+   "skill": -0.0063,
+   "gap": 0.0,
+   "se": 0.0066,
+   "tier": "Low"
+  },
+  "cards_h1_ou|4": {
+   "n": 5211,
+   "skill": 0.0053,
+   "gap": 0.0035,
+   "se": 0.0064,
+   "tier": "Low"
+  },
+  "cards_h1_ou|5": {
+   "n": 7479,
+   "skill": -0.0003,
+   "gap": -0.0047,
+   "se": 0.0044,
+   "tier": "Low"
+  },
+  "cards_h1_ou|6": {
+   "n": 88,
+   "skill": 0.0979,
+   "gap": -0.0255,
+   "se": 0.0311,
+   "tier": "Low"
+  },
+  "cards_h2_ou|0": {
+   "n": 4882,
+   "skill": -0.0148,
+   "gap": -0.0309,
+   "se": 0.0035,
+   "tier": "Low"
+  },
+  "cards_h2_ou|1": {
+   "n": 4658,
+   "skill": 0.0032,
+   "gap": -0.033,
+   "se": 0.0058,
+   "tier": "Low"
+  },
+  "cards_h2_ou|2": {
+   "n": 6662,
+   "skill": -0.0047,
+   "gap": -0.0028,
+   "se": 0.0057,
+   "tier": "Low"
+  },
+  "cards_h2_ou|3": {
+   "n": 9276,
+   "skill": 0.0007,
+   "gap": 0.0,
+   "se": 0.0052,
+   "tier": "Low"
+  },
+  "cards_h2_ou|4": {
+   "n": 6662,
+   "skill": -0.0047,
+   "gap": 0.0028,
+   "se": 0.0057,
+   "tier": "Low"
+  },
+  "cards_h2_ou|5": {
+   "n": 4658,
+   "skill": 0.0032,
+   "gap": 0.033,
+   "se": 0.0058,
+   "tier": "Low"
+  },
+  "cards_h2_ou|6": {
+   "n": 4882,
+   "skill": -0.0148,
+   "gap": 0.0309,
+   "se": 0.0035,
+   "tier": "Low"
+  },
+  "cards_half_most|1": {
+   "n": 10420,
+   "skill": 0.0004,
+   "gap": -0.0034,
+   "se": 0.0037,
+   "tier": "Low"
+  },
+  "cards_half_most|3": {
+   "n": 28,
+   "skill": -0.0221,
+   "gap": -0.0841,
+   "se": 0.0928,
+   "tier": "Low"
+  },
+  "cards_half_most|4": {
+   "n": 5182,
+   "skill": -0.0008,
+   "gap": 0.0074,
+   "se": 0.0066,
+   "tier": "Low"
+  },
   "cards_odd_even|3": {
    "n": 6000,
    "skill": 0.0,
@@ -2382,6 +2501,83 @@
    "gap": 0.0165,
    "se": 0.0152,
    "tier": "High"
+  },
+  "first_card_by|0": {
+   "n": 2,
+   "skill": 0.7123,
+   "gap": 0.0931,
+   "se": 0.2054,
+   "tier": "Low"
+  },
+  "first_card_by|1": {
+   "n": 7899,
+   "skill": 0.0001,
+   "gap": -0.0057,
+   "se": 0.0045,
+   "tier": "Low"
+  },
+  "first_card_by|2": {
+   "n": 2828,
+   "skill": 0.0024,
+   "gap": -0.0342,
+   "se": 0.0085,
+   "tier": "Low"
+  },
+  "first_card_by|3": {
+   "n": 9802,
+   "skill": 0.0002,
+   "gap": 0.0,
+   "se": 0.005,
+   "tier": "Low"
+  },
+  "first_card_by|4": {
+   "n": 2828,
+   "skill": 0.0024,
+   "gap": 0.0342,
+   "se": 0.0085,
+   "tier": "Low"
+  },
+  "first_card_by|5": {
+   "n": 7899,
+   "skill": 0.0001,
+   "gap": 0.0057,
+   "se": 0.0045,
+   "tier": "Low"
+  },
+  "first_card_by|6": {
+   "n": 2,
+   "skill": 0.7123,
+   "gap": -0.0931,
+   "se": 0.2054,
+   "tier": "Low"
+  },
+  "first_card_team|0": {
+   "n": 5210,
+   "skill": -0.0115,
+   "gap": -0.0164,
+   "se": 0.0018,
+   "tier": "Low"
+  },
+  "first_card_team|2": {
+   "n": 534,
+   "skill": 0.039,
+   "gap": 0.0639,
+   "se": 0.021,
+   "tier": "Medium"
+  },
+  "first_card_team|3": {
+   "n": 9647,
+   "skill": 0.0089,
+   "gap": 0.0051,
+   "se": 0.0051,
+   "tier": "Low"
+  },
+  "first_card_team|4": {
+   "n": 239,
+   "skill": 0.023,
+   "gap": 0.009,
+   "se": 0.0315,
+   "tier": "Medium"
   },
   "first_goal|0": {
    "n": 1221,
@@ -6289,6 +6485,111 @@
    "se": 0.0553,
    "tier": "Low"
   },
+  "player_carded|0": {
+   "n": 100167,
+   "skill": 0.0235,
+   "gap": -0.0013,
+   "se": 0.0008,
+   "tier": "Medium"
+  },
+  "player_carded|1": {
+   "n": 46089,
+   "skill": 0.0286,
+   "gap": 0.0123,
+   "se": 0.0016,
+   "tier": "Medium"
+  },
+  "player_carded|2": {
+   "n": 358,
+   "skill": -0.0525,
+   "gap": 0.1227,
+   "se": 0.0235,
+   "tier": "Low"
+  },
+  "player_fouled|0": {
+   "n": 408944,
+   "skill": 0.1149,
+   "gap": -0.0131,
+   "se": 0.0003,
+   "tier": "High"
+  },
+  "player_fouled|1": {
+   "n": 141454,
+   "skill": 0.0704,
+   "gap": -0.0053,
+   "se": 0.001,
+   "tier": "High"
+  },
+  "player_fouled|2": {
+   "n": 68291,
+   "skill": 0.0864,
+   "gap": 0.0016,
+   "se": 0.0018,
+   "tier": "High"
+  },
+  "player_fouled|3": {
+   "n": 40179,
+   "skill": 0.1832,
+   "gap": -0.0054,
+   "se": 0.0025,
+   "tier": "High"
+  },
+  "player_fouled|4": {
+   "n": 4988,
+   "skill": 0.3642,
+   "gap": -0.0113,
+   "se": 0.0068,
+   "tier": "High"
+  },
+  "player_fouled|5": {
+   "n": 104,
+   "skill": 0.597,
+   "gap": -0.0447,
+   "se": 0.0411,
+   "tier": "Low"
+  },
+  "player_fouls|0": {
+   "n": 195548,
+   "skill": 0.1277,
+   "gap": -0.0227,
+   "se": 0.0004,
+   "tier": "High"
+  },
+  "player_fouls|1": {
+   "n": 130980,
+   "skill": 0.0489,
+   "gap": -0.0114,
+   "se": 0.001,
+   "tier": "Medium"
+  },
+  "player_fouls|2": {
+   "n": 74057,
+   "skill": 0.0534,
+   "gap": -0.0044,
+   "se": 0.0017,
+   "tier": "High"
+  },
+  "player_fouls|3": {
+   "n": 43002,
+   "skill": 0.1486,
+   "gap": -0.0093,
+   "se": 0.0024,
+   "tier": "High"
+  },
+  "player_fouls|4": {
+   "n": 2146,
+   "skill": 0.3569,
+   "gap": -0.0351,
+   "se": 0.0104,
+   "tier": "High"
+  },
+  "player_fouls|5": {
+   "n": 1,
+   "skill": 0.8342,
+   "gap": -0.1986,
+   "se": 0.399,
+   "tier": "Low"
+  },
   "player_shots|0": {
    "n": 107124,
    "skill": 0.0435,
@@ -8413,53 +8714,53 @@
    "tier": "High"
   },
   "G|0": {
-   "n": 6502,
-   "skill": 0.0616,
-   "gap": -0.0081,
-   "se": 0.0032,
-   "tier": "High"
+   "n": 16684,
+   "skill": 0.0211,
+   "gap": -0.0172,
+   "se": 0.0017,
+   "tier": "Medium"
   },
   "G|1": {
-   "n": 25036,
-   "skill": 0.0199,
-   "gap": -0.002,
-   "se": 0.0024,
-   "tier": "Medium"
+   "n": 55492,
+   "skill": 0.0092,
+   "gap": -0.0045,
+   "se": 0.0016,
+   "tier": "Low"
   },
   "G|2": {
-   "n": 24668,
-   "skill": 0.0204,
-   "gap": 0.0128,
-   "se": 0.003,
-   "tier": "Medium"
+   "n": 39903,
+   "skill": 0.0133,
+   "gap": 0.0054,
+   "se": 0.0023,
+   "tier": "Low"
   },
   "G|3": {
-   "n": 32016,
-   "skill": 0.0214,
+   "n": 66473,
+   "skill": 0.0113,
    "gap": 0.0013,
-   "se": 0.0028,
-   "tier": "Medium"
+   "se": 0.0019,
+   "tier": "Low"
   },
   "G|4": {
-   "n": 17744,
-   "skill": 0.026,
-   "gap": -0.0109,
-   "se": 0.0035,
-   "tier": "Medium"
+   "n": 37866,
+   "skill": 0.0123,
+   "gap": -0.0005,
+   "se": 0.0024,
+   "tier": "Low"
   },
   "G|5": {
-   "n": 19755,
-   "skill": 0.0226,
-   "gap": -0.0055,
-   "se": 0.0027,
-   "tier": "Medium"
+   "n": 39791,
+   "skill": 0.0111,
+   "gap": 0.0014,
+   "se": 0.0019,
+   "tier": "Low"
   },
   "G|6": {
-   "n": 6279,
-   "skill": 0.057,
-   "gap": 0.0078,
-   "se": 0.0032,
-   "tier": "High"
+   "n": 11251,
+   "skill": 0.025,
+   "gap": 0.0176,
+   "se": 0.0024,
+   "tier": "Medium"
   },
   "H|0": {
    "n": 21214,
@@ -8511,80 +8812,80 @@
    "tier": "High"
   },
   "I|0": {
-   "n": 328637,
-   "skill": 0.0453,
-   "gap": -0.0125,
-   "se": 0.0003,
-   "tier": "Medium"
+   "n": 1033296,
+   "skill": 0.0875,
+   "gap": -0.0136,
+   "se": 0.0002,
+   "tier": "High"
   },
   "I|1": {
-   "n": 110298,
-   "skill": 0.0717,
-   "gap": -0.0033,
-   "se": 0.0011,
+   "n": 428821,
+   "skill": 0.0603,
+   "gap": -0.0048,
+   "se": 0.0006,
    "tier": "High"
   },
   "I|2": {
-   "n": 45865,
-   "skill": 0.0935,
-   "gap": 0.0033,
-   "se": 0.0022,
+   "n": 188571,
+   "skill": 0.0752,
+   "gap": -0.0001,
+   "se": 0.0011,
    "tier": "High"
   },
   "I|3": {
-   "n": 23813,
-   "skill": 0.1621,
-   "gap": 0.0053,
-   "se": 0.0032,
+   "n": 106994,
+   "skill": 0.1649,
+   "gap": -0.0046,
+   "se": 0.0015,
    "tier": "High"
   },
   "I|4": {
-   "n": 4954,
-   "skill": 0.307,
-   "gap": -0.0106,
-   "se": 0.0067,
+   "n": 12088,
+   "skill": 0.3407,
+   "gap": -0.0152,
+   "se": 0.0043,
    "tier": "High"
   },
   "I|5": {
-   "n": 371,
-   "skill": 0.4988,
-   "gap": -0.0222,
-   "se": 0.0214,
+   "n": 476,
+   "skill": 0.5243,
+   "gap": -0.0275,
+   "se": 0.019,
    "tier": "High"
   }
  },
  "validation": {
-  "fitted_on_matches": 44893,
-  "checked_on_matches": 59914,
-  "until": "2026-02-01",
+  "fitted_on_matches": 6466,
+  "checked_on_matches": 1917,
+  "until": "2026-01-14",
   "tiers": [
    {
     "tier": "High",
-    "share": 0.2317,
-    "predicted": 0.3853,
-    "happened": 0.3895,
-    "skill": 0.0998
+    "share": 0.3804,
+    "predicted": 0.2399,
+    "happened": 0.2474,
+    "skill": 0.0942
    },
    {
     "tier": "Medium",
-    "share": 0.4904,
-    "predicted": 0.1803,
-    "happened": 0.1848,
-    "skill": 0.0411
+    "share": 0.4072,
+    "predicted": 0.1909,
+    "happened": 0.1948,
+    "skill": 0.0467
    },
    {
     "tier": "Low",
-    "share": 0.2779,
-    "predicted": 0.4141,
-    "happened": 0.4141,
-    "skill": 0.0137
+    "share": 0.2124,
+    "predicted": 0.4117,
+    "happened": 0.4116,
+    "skill": 0.011
    }
   ]
  },
  "backtest": {
-  "matches": 88307,
+  "matches": 8383,
   "from": "2022-08-05",
-  "to": "2026-10-12",
-  "selections": 2472938
+  "to": "2026-10-14",
+  "selections": 3864706
  }
 }

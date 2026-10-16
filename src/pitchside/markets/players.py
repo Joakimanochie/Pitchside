@@ -20,7 +20,7 @@ def _not_scored_from_scores(sel, line, h, a):
 
 @dataclass(frozen=True)
 class PlayerMarket(Market):
-    player_stat: str = ""           # goals, shots, sot or assists: which count of the player decides the bet
+    player_stat: str = ""           # goals, shots, sot, assists (from shot events) or cards, fouls, fouled (from the ESPN match log): which count decides the bet
 
 
 def _market(id_, name, player_stat, lines=()):
@@ -32,7 +32,12 @@ MARKETS: dict[str, PlayerMarket] = {m.id: m for m in [
     _market("player_assist", "Anytime Assist", "assists"),
     _market("player_shots", "Player Shots Over", "shots", (0.5, 1.5, 2.5)),
     _market("player_sot", "Player Shots on Target Over", "sot", (0.5, 1.5)),
+    _market("player_carded", "Player To Be Carded", "cards"),
+    _market("player_fouls", "Player Fouls Committed Over", "fouls", (0.5, 1.5)),
+    _market("player_fouled", "Player Fouls Won Over", "fouled", (0.5, 1.5)),
 ]}
+
+LOG_STATS = {"cards", "fouls", "fouled"}     # counted from the ESPN match log: settled only for matches whose log was verified
 
 
 def settle_player(market: PlayerMarket, line: float | None, player: str, players: dict) -> dict:

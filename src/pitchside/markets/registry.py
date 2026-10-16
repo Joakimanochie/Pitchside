@@ -8,6 +8,7 @@ Two kinds of market:
                   minutes were verified.
 """
 from pitchside.markets.base import Market
+from pitchside.markets.cardtiming import MARKETS as FAMILY_G_TIMING
 from pitchside.markets.combos import MARKETS as FAMILY_E
 from pitchside.markets.counts import MARKETS as FAMILY_FGH
 from pitchside.markets.goals import MARKETS as FAMILY_A
@@ -19,8 +20,9 @@ from pitchside.markets.record_base import RecordMarket
 SCORE_MARKETS: dict[str, Market] = {**FAMILY_A}
 PLAYER_MARKETS = {**FAMILY_I}   # I: one selection per player, settled from the player's own counts (experimental)
 COUNT_MARKETS: dict[str, Market] = {**FAMILY_FGH}   # F-H: counts of corners, cards, shots; priced from their own count models
+CARD_TIMING_MARKETS = {**FAMILY_G_TIMING}           # G: cards by half, first card; priced from the cards count model plus the card timing profile
 RECORD_MARKETS: dict[str, RecordMarket] = {**FAMILY_B, **FAMILY_CD, **FAMILY_E}
-MARKETS: dict[str, Market | RecordMarket] = {**SCORE_MARKETS, **RECORD_MARKETS, **COUNT_MARKETS, **PLAYER_MARKETS}
+MARKETS: dict[str, Market | RecordMarket] = {**SCORE_MARKETS, **RECORD_MARKETS, **COUNT_MARKETS, **CARD_TIMING_MARKETS, **PLAYER_MARKETS}
 
-if len(MARKETS) != len(SCORE_MARKETS) + len(RECORD_MARKETS) + len(COUNT_MARKETS) + len(PLAYER_MARKETS):
+if len(MARKETS) != len(SCORE_MARKETS) + len(RECORD_MARKETS) + len(COUNT_MARKETS) + len(CARD_TIMING_MARKETS) + len(PLAYER_MARKETS):
     raise RuntimeError("two markets share an id")

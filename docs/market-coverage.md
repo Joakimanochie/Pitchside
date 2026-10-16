@@ -1,6 +1,6 @@
 # Market coverage
 
-What the system prices today, against the SportyBet catalogue in `docs/market-catalogue.md`. Updated 2026-10-14.
+What the system prices today, against the SportyBet catalogue in `docs/market-catalogue.md`. Updated 2026-10-16.
 
 **200 markets: 945 selections per match from the goals simulation plus 212 from the count models** (corners, cards, shots, shots on target).
 Families A to E are priced from one simulation so they agree with each other; F to H come from their own count models and are independent of it.
@@ -14,8 +14,9 @@ Families A to E are priced from one simulation so they agree with each other; F 
 | E. Combinations | 41 | Simulation | Final and half-time score |
 | F. Corners | 7 | Negative binomial count model (model line `counts-nb-0.1.0`) | Team corners from football-data |
 | G. Cards | 7 | Same | Yellow plus red cards |
+| G. Card timing | 5 | The cards count model's joint distribution of both sides' cards, split into halves and minutes by the typical pattern of past cards (model line `cardtime-0.1.0`) | The cards of the match with their minute (ESPN), only when they add up to the real card counts |
 | H. Shots and shots on target | 10 | Same | Team shots and shots on target |
-| I. Players (experimental) | 4 | Each player's recent share of his club's goals, shots, shots on target and assists, scaled by the goals model's expected goals (model line `players-0.1.0`) | The player's own counts from Understat shot events |
+| I. Players (experimental) | 7 | Each player's recent share of his club's goals, shots, shots on target and assists, scaled by the goals model's expected goals; cards from his recent cards per club match scaled by the club's expected cards in the match; fouls committed and won from his recent record (model line `players-0.3.0`, with the announced lineup `players-0.4.0`) | The player's own counts: shots and goals from Understat, cards and fouls from the ESPN match log shot events |
 
 "Verified goal minutes" means Understat's goals add up to the real full-time and half-time scores. A match that fails that
 check keeps its goal-minute markets as "not scorable" and is never settled from doubtful data.
@@ -48,8 +49,8 @@ check keeps its goal-minute markets as "not scorable" and is never settled from 
 - **A**: Over/Under - Early Goals (needs a minute parameter we have not confirmed), full-time Multigoals (home, away, match), Correct Score [0:0] variant.
 - **B**: HT/FT correct score, 1st-half and 2nd-half "1st Goal", first-half goal bounds and excluded goals.
 - **E**: HT/FT with exact goals.
-- **F-H**: first and last corner, half-by-half corners and cards, player to be carded, posts and crossbars, offsides, tackles, team assists, substitutions: no data source for them in our feeds.
-- **I players**: first/last goalscorer, player to be carded, tackles, fouls won, player goals as a count line: no data or no calibrated approach yet. Lineups are not used at all.
+- **F-H**: first and last corner and half-by-half corners (ESPN lists corner minutes but misses 1 to 5 corners in most matches, so they are not reliable), posts and crossbars, offsides, tackles, team assists, substitutions: no data source for them in our feeds.
+- **I players**: first/last goalscorer, tackles, player goals as a count line: no data or no calibrated approach yet. Lineups are used only once announced (about an hour before kickoff), and the lineup adjustment is not validated.
 
 ## Rules we settled on where the site's text was ambiguous
 
@@ -57,3 +58,12 @@ check keeps its goal-minute markets as "not scorable" and is never settled from 
 - "Goals from 1 to N minutes" counts every goal up to and including minute N.
 - Own goals count for the team credited with the goal.
 - 1UP / 2UP: a side's bet is won as soon as it leads by one or two goals, whatever happens afterwards; the draw is settled on the full-time score.
+
+## Card timing and player cards and fouls (added 2026-10-16)
+
+Data: ESPN match summaries from 2023/24 on (`scripts/load_espn_log.py`, daily for new matches): every card with its minute and player, and each player's fouls and cards. A match's log is
+trusted only when the cards ESPN lists for each side, and the players' own cards, equal the yellow plus red cards football-data recorded for that side (about nine matches in ten); the rest are
+flagged and ignored.
+
+- **Card timing (G)**: cards 1st half over/under 0.5, 1.5, 2.5; 2nd half over/under 0.5 to 3.5; which half has more cards; which team is shown the first card (or none); a card shown by minute 15, 30 or 45.
+- **Players (I)**: to be carded, fouls committed over 0.5 or 1.5, fouls won over 0.5 or 1.5. They exist for every league with a log, the Championship included.

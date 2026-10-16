@@ -20,6 +20,7 @@ from pitchside.confidence import (
 
 SRC = "data/raw/tier_backtest.csv.gz"            # families A-E (scripts/backtest_tiers.py)
 COUNTS = "data/raw/count_backtest.csv.gz"        # families F-H (scripts/backtest_counts.py), added when present
+CARD_TIMING = "data/raw/cardtiming_backtest.csv.gz"   # card timing markets, family G (scripts/backtest_cardtiming.py), added when present
 
 
 def summarise(rows: pd.DataFrame, label: str) -> pd.DataFrame:
@@ -34,13 +35,15 @@ def summarise(rows: pd.DataFrame, label: str) -> pd.DataFrame:
 
 def main() -> None:
     df = pd.read_csv(SRC, parse_dates=["date"])
-    for extra in (COUNTS, *sorted(str(p) for p in Path("data/raw").glob("player_dataset_*.csv.gz"))):   # F-H and the experimental player markets (I), when present
+    for extra in (COUNTS, CARD_TIMING, *sorted(str(p) for p in Path("data/raw").glob("player_dataset_*.csv.gz"))):   # F-H and the experimental player markets (I), when present
         if Path(extra).exists():
             df = pd.concat([df, pd.read_csv(extra, parse_dates=["date"])], ignore_index=True)
     df["line"] = df["line"].astype(float)
     cut = df["date"].sort_values().iloc[int(len(df) * 0.6)]
     fit, test = df[df["date"] < cut], df[df["date"] >= cut]
-    print(f"{df.match_id.nunique()} matches; rules fitted on {fit.match_id.nunique()} (before {cut.date()}), checked on {test.match_id.nunique()}")
+    # the player datasets number their rows, not matches, so matches are counted from the team-level markets only
+    team = lambda d: d[d["family"] != "I"]["match_id"].nunique()
+    print(f"{team(df)} matches; rules fitted on {team(fit)} (before {cut.date()}), checked on {team(test)}")
     rules = fit_rules(fit)
     rows = score_rows(test, base_rates(fit))
     rows["tier"] = [tier_for(rules, m, f, p) for m, f, p in zip(rows["market_id"], rows["family"], rows["p"], strict=True)]
@@ -57,10 +60,10 @@ def main() -> None:
 
     final = fit_rules(df)
     check = summarise(rows, "tier")
-    final["validation"] = {"fitted_on_matches": int(fit.match_id.nunique()), "checked_on_matches": int(test.match_id.nunique()), "until": str(cut.date()),
+    final["validation"] = {"fitted_on_matches": int(team(fit)), "checked_on_matches": int(team(test)), "until": str(cut.date()),
                            "tiers": [{"tier": r.tier, "share": round(float(r.share), 4), "predicted": round(float(r.avg_predicted), 4), "happened": round(float(r.happened), 4),
                                       "skill": round(float(r.skill_vs_base), 4)} for r in check.itertuples()]}
-    final["backtest"] = {"matches": int(df.match_id.nunique()), "from": str(df["date"].min().date()), "to": str(df["date"].max().date()), "selections": len(df)}
+    final["backtest"] = {"matches": int(team(df)), "from": str(df["date"].min().date()), "to": str(df["date"].max().date()), "selections": len(df)}
     all_rows = score_rows(df, base_rates(df))
     all_rows["tier"] = [tier_for(final, m, f, p) for m, f, p in zip(all_rows["market_id"], all_rows["family"], all_rows["p"], strict=True)]
     print("\nFINAL RULES, all matches (in-sample, for the share of each tier only)")

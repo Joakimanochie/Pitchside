@@ -15,8 +15,8 @@
 		<h2>Where the numbers come from</h2>
 		<ul>
 			<li><strong>Goals markets</strong> (result, over/under, both teams to score, handicaps, correct score and so on): each club gets an attack and a defence rating from its past results, with recent matches counting more, and matches are turned into scoreline probabilities. Halves, game flow, goal timing and combination markets come from simulating many matches from those probabilities.</li>
-			<li><strong>Corners, cards, shots and shots on target</strong>: the same idea with counts of those things instead of goals.</li>
-			<li><strong>Player markets</strong> (experimental): each player’s recent share of his club’s goals, shots and assists, combined with the club’s expected goals in the match. Lineups are not known, so these are rough guides.</li>
+			<li><strong>Corners, cards, shots and shots on target</strong>: the same idea with counts of those things instead of goals. <strong>Card timing</strong> (cards in each half, the first card, a card by a given minute) splits a match’s expected cards using when cards usually come.</li>
+			<li><strong>Player markets</strong> (experimental): each player’s recent share of his club’s goals, shots and assists, combined with the club’s expected goals in the match, and his recent cards and fouls. Lineups are not known, so these are rough guides.</li>
 			<li><strong>The Championship</strong> uses the same models, but is newer here: its confidence bars are not rated yet and it has no player markets, because the shot data those need does not cover it.</li>
 			<li><strong>Bookmaker prices</strong> are shown for comparison only. They are never used to make a prediction.</li>
 		</ul>

@@ -13,6 +13,7 @@ import psycopg
 
 from pitchside.confidence import RATED_LEAGUES, TIERS, UNRATED, load_rules, tier_for
 from pitchside.leagues import LEAGUES
+from pitchside.markets.players import LOG_STATS
 from pitchside.markets.registry import MARKETS
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -146,7 +147,8 @@ def build_snapshot(conn: psycopg.Connection) -> dict:
     counts = conn.execute("SELECT model_version_id FROM prediction_runs WHERE run_type = 'weekly' AND model_version_id LIKE 'counts-%' ORDER BY created_at DESC LIMIT 1").fetchone()
     # player markets: every match shows its newest player prediction (the weekly one, or the lineup-aware one made once the lineup was named)
     player_versions = [r[0] for r in conn.execute("SELECT DISTINCT model_version_id FROM prediction_runs WHERE run_type = 'weekly' AND model_version_id LIKE 'players-%'")]
-    versions = [version] + ([counts[0]] if counts else []) + player_versions
+    timing = conn.execute("SELECT model_version_id FROM prediction_runs WHERE run_type = 'weekly' AND model_version_id LIKE 'cardtime-%' ORDER BY created_at DESC LIMIT 1").fetchone()
+    versions = [version] + ([counts[0]] if counts else []) + ([timing[0]] if timing else []) + player_versions
     matches = conn.execute(
         "SELECT DISTINCT m.id, m.league_id, m.kickoff, th.canonical_name, ta.canonical_name, m.home_team_id, m.away_team_id FROM predictions p "
         "JOIN prediction_runs r ON r.id = p.run_id JOIN matches m ON m.id = p.match_id "
@@ -163,8 +165,8 @@ def build_snapshot(conn: psycopg.Connection) -> dict:
             "JOIN prediction_runs r ON r.id = p.run_id WHERE r.model_version_id = ANY(%s) AND r.run_type = 'weekly' "
             "AND p.match_id = ANY(%s) AND (r.model_version_id NOT LIKE 'players-%%' OR r.id = (SELECT r2.id FROM prediction_runs r2 JOIN predictions p2 ON p2.run_id = r2.id "
             "WHERE p2.match_id = p.match_id AND r2.model_version_id LIKE 'players-%%' AND r2.run_type = 'weekly' ORDER BY r2.created_at DESC LIMIT 1)) ORDER BY p.id", (versions, ids)):
-        if market_id in MARKETS and MARKETS[market_id].family == 'I' and league_of[mid] not in RATED_LEAGUES:
-            continue            # no player markets for leagues without shot data
+        if market_id in MARKETS and MARKETS[market_id].family == 'I' and MARKETS[market_id].player_stat not in LOG_STATS and league_of[mid] not in RATED_LEAGUES:
+            continue            # no shot-based player markets for leagues without shot data (cards and fouls come from the ESPN log and exist everywhere)
         tier = (UNRATED if league_of[mid] not in RATED_LEAGUES else TIERS.index(tier_for(rules, market_id, MARKETS[market_id].family, float(prob)))) if market_id in MARKETS else 2
         preds[mid][market_id]["null" if line is None else str(float(line))].append([sel, round(float(prob), 4), 1 if pick else 0, tier])
 
