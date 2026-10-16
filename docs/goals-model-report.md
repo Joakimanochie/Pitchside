@@ -292,3 +292,17 @@ A club that changes league is rated, in the single-league model, only on its mat
 | Premier League, a club that came up (306) | 0.9263 | 0.9447 | +0.0184 (+1.9) |
 
 So carrying a rating down a league helps a little, but carrying it up hurts: one league-average gap does not fit both directions (promoted clubs are rated too highly), and the Championship gain is not consistent from season to season (worse in 2024/25). Not adopted: production keeps one fit per league. It is the starting point for the Champions League and Europa League, where clubs from many leagues meet.
+
+### Carrying a rating with a discount (tested, not adopted)
+
+`models/stints.py` keeps a separate rating for each club in each league and pulls a club's rating in its new league toward its old one (a `carry` between 0 and 1, plus a fitted gap for the move). `scripts/backtest_stints.py` chose the carry on matches up to July 2024 and judged it on matches after; match-result log loss, lower is better:
+
+| Matches | Single league | Carry 0 | Carry 0.5 | Carry 1 |
+|---|---|---|---|---|
+| Championship, club changed league, to July 2024 (142) | 0.9948 | 0.9859 | 0.9802 | 0.9756 |
+| Championship, club changed league, from Aug 2024 (176) | 1.0546 | 1.0553 | 1.0548 | 1.0543 |
+| Premier League, club changed league, to July 2024 (144) | 0.9064 | 0.9043 | 0.9044 | 0.9047 |
+| Premier League, club changed league, from Aug 2024 (162) | 0.9440 | 0.9430 | 0.9453 | 0.9481 |
+| Premier League, all, from Aug 2024 (820) | 1.0230 | 1.0237 | 1.0241 | 1.0247 |
+
+The early gain for clubs coming down to the Championship (0.019 better with full carry) is gone on later matches (0.0003), and for clubs going up carrying more is worse. Over/under 2.5 barely moves. The effect is not stable, so it is not adopted: production keeps one fit per league, and the earlier result in `pyramid` above is explained by the 2022-24 seasons alone. Consequence for the Championship: a club just relegated is rated on its Championship matches only, which is as good as anything we can validate.
