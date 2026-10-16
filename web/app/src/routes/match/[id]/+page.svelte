@@ -50,6 +50,10 @@
 		</div>
 	</section>
 
+	{#if match.league === 'CHAMP'}
+		<p class="span" style="margin-top:1rem">Championship predictions are new. They come from the same models as the top five leagues, but the confidence bars are not rated here yet (empty bars): they are built from tests on the top five leagues, and the Championship is harder to predict. Player markets are not available for this league.</p>
+	{/if}
+
 	<KeyNumbers preds={match.preds} {index} {ctx} />
 
 	<OddsCompare {match} {index} />

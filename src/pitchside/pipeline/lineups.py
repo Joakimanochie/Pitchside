@@ -13,6 +13,7 @@ from datetime import UTC, datetime, timedelta
 
 import psycopg
 
+from pitchside.confidence import RATED_LEAGUES
 from pitchside.db.markets import seed_markets
 from pitchside.db.migrate import _load_env, apply_migrations
 from pitchside.db.predictions import (
@@ -61,9 +62,9 @@ def ingest_lineups(conn: psycopg.Connection, hours: float = 3.0) -> list[int]:
 def predict_lineup_players(conn: psycopg.Connection, match_ids: list[int]) -> dict:
     """Lineup-aware player prices for these matches (once per match per version)."""
     todo = [r for r in conn.execute(
-        "SELECT m.id, m.home_team_id, m.away_team_id, m.match_date FROM matches m WHERE m.id = ANY(%s) AND NOT EXISTS ("
+        "SELECT m.id, m.home_team_id, m.away_team_id, m.match_date FROM matches m WHERE m.id = ANY(%s) AND m.league_id = ANY(%s) AND NOT EXISTS ("
         "SELECT 1 FROM predictions p JOIN prediction_runs r ON r.id = p.run_id WHERE p.match_id = m.id AND r.run_type = 'weekly' AND r.model_version_id = %s)",
-        (match_ids, LINEUP_PLAYER_VERSION)).fetchall()]
+        (match_ids, list(RATED_LEAGUES), LINEUP_PLAYER_VERSION)).fetchall()]
     if not todo:
         return {"run_id": None, "matches": 0, "predictions": 0}
     seed_markets(conn)

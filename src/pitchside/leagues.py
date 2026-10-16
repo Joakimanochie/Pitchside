@@ -8,7 +8,7 @@ class League:
     name: str
     country: str
     fd_code: str      # football-data.co.uk division code
-    understat: str    # soccerdata league key
+    understat: str | None   # soccerdata league key; None where Understat has no coverage (no player or shot data, goal minutes come from ESPN)
     espn_code: str
     tier: int = 1
 
@@ -21,5 +21,6 @@ LEAGUES: dict[str, League] = {
         League("BUNDESLIGA", "Bundesliga", "Germany", "D1", "GER-Bundesliga", "ger.1"),
         League("SERIEA", "Serie A", "Italy", "I1", "ITA-Serie A", "ita.1"),
         League("LIGUE1", "Ligue 1", "France", "F1", "FRA-Ligue 1", "fra.1"),
+        League("CHAMP", "Championship", "England", "E1", None, "eng.2", tier=2),
     ]
 }

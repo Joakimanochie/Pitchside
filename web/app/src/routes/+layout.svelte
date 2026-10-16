@@ -44,7 +44,7 @@
 
 <svelte:head>
 	<title>Pitchside · match predictions</title>
-	<meta name="description" content="A probability for every market on every match in Europe's top five leagues, stored before kickoff and scored after." />
+	<meta name="description" content="A probability for every market on every match in Europe's top leagues, stored before kickoff and scored after." />
 </svelte:head>
 
 <div class="shell" class:on-record={onRecord}>

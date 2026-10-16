@@ -59,7 +59,7 @@ def build_outcomes(conn: psycopg.Connection) -> int:
     verified = [m[0] for m in matches if m[5] == "true"]
     for match_id, period, minute, side in conn.execute(
             "SELECT match_id, period, minute, details ->> 'side' FROM match_events WHERE match_id = ANY(%s) "
-            "AND source = 'understat' AND event_type = ANY(%s) ORDER BY match_id, period, minute", (verified, list(GOAL_TYPES))):
+            "AND source IN ('understat', 'espn') AND event_type = ANY(%s) ORDER BY match_id, period, minute", (verified, list(GOAL_TYPES))):
         goals[match_id].append([side, period, minute])
     players: dict[int, dict] = defaultdict(dict)     # per player counts, only for matches whose shots we hold
     for match_id, name, goals_n, shots_n, sot_n in conn.execute(

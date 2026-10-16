@@ -286,6 +286,7 @@ td strong { font-weight: 600; }
 .conf-0 i { background: var(--ink); }
 .conf-1 i:nth-child(-n+2) { background: var(--ink-2); }
 .conf-2 i:nth-child(1) { background: var(--ink-3); }
+.conf-3 i { background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); }
 .who .conf { margin-left: .5rem; }
 .conf-legend { margin: .9rem 0 0; font-size: .9rem; }
 .conf-legend summary { cursor: pointer; display: inline-flex; align-items: center; color: var(--ink-2); }

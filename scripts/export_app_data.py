@@ -17,7 +17,7 @@ import psycopg
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import export_common as base
 
-from pitchside.confidence import TIERS, load_rules, tier_for
+from pitchside.confidence import RATED_LEAGUES, TIERS, UNRATED, load_rules, tier_for
 from pitchside.db.migrate import _load_env
 from pitchside.markets.registry import MARKETS
 from pitchside.odds.compare import demargin, edge, expected_value, overround
@@ -133,7 +133,9 @@ def export_results(conn: psycopg.Connection, rules: dict, out_dir: Path) -> list
                 "WHERE p.match_id = %s AND p.run_id = ANY(%s) ORDER BY p.id", (mid, [r[0] for r in runs.values()])):
             if market not in MARKETS:
                 continue
-            tier = TIERS.index(tier_for(rules, market, MARKETS[market].family, float(prob)))
+            if MARKETS[market].family == 'I' and league not in RATED_LEAGUES:
+                continue
+            tier = UNRATED if league not in RATED_LEAGUES else TIERS.index(tier_for(rules, market, MARKETS[market].family, float(prob)))
             outcome = OUTCOME.get(result, 3)
             preds.setdefault(market, {}).setdefault("null" if line is None else str(float(line)), []).append([sel, round(float(prob), 4), 1 if is_pick else 0, tier, outcome])
             if outcome == 3:

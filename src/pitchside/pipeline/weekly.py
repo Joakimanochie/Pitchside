@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 import psycopg
 
+from pitchside.confidence import RATED_LEAGUES
 from pitchside.db.markets import seed_markets
 from pitchside.db.migrate import _load_env, apply_migrations
 from pitchside.db.predictions import (
@@ -247,6 +248,8 @@ def player_rows(rates: TeamRates, club_goals: float) -> list[dict]:
 
 def predict_players(conn: psycopg.Connection, league_id: str, as_of: date, days: int, force: bool = False) -> dict:
     """Price player markets (experimental) for fixtures in the next `days` days from each club's recent shot data and the goals model's expected goals."""
+    if league_id not in RATED_LEAGUES:      # shot data (Understat) covers only the five rated leagues; a promoted or relegated club's old shots would be stale
+        return {"run_id": None, "matches": 0, "predictions": 0, "note": "no player data for this league"}
     now = datetime.now(UTC)
     not_yet = "" if force else ("AND NOT EXISTS (SELECT 1 FROM predictions p JOIN prediction_runs r ON r.id = p.run_id "
                                 "WHERE p.match_id = m.id AND r.run_type = 'weekly' AND r.model_version_id = %s) ")

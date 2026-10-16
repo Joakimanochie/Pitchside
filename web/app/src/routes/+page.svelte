@@ -25,7 +25,7 @@
 
 <div class="wrap">
 	<div class="intro">
-		<h1 class="display">This week across Europe’s top five leagues</h1>
+		<h1 class="display">This week across Europe’s top leagues</h1>
 		<p class="lede">Every upcoming match, with a probability for every market a betting site offers. Open a match to read all of them, and the numbers behind them.</p>
 		<div class="pills" role="group" aria-label="League">
 			<button class="pill" aria-pressed={ui.league === 'ALL'} onclick={() => (ui.league = 'ALL')}>All leagues <span class="count">{index.fixtures.length}</span></button>

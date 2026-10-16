@@ -8,9 +8,10 @@ from pitchside.db.teams import ALIASES_CSV, TeamResolver, load_aliases, seed_lea
 from pitchside.ingest.footballdata import RAW_DIR, load_seasons, season_code
 from pitchside.leagues import LEAGUES
 
-EXPECTED_CLUBS = {"EPL": 35, "LALIGA": 32, "BUNDESLIGA": 31, "SERIEA": 35, "LIGUE1": 34}
+EXPECTED_CLUBS = {"EPL": 35, "LALIGA": 32, "BUNDESLIGA": 31, "SERIEA": 35, "LIGUE1": 34, "CHAMP": 24}
 ESPN_SNAPSHOT = ALIASES_CSV.parent / "processed" / "phase1b_names.json"
 YEARS = list(range(2015, 2027))
+FOOTBALLDATA_CLUBS = {"CHAMP": 51}
 
 
 def rows():
@@ -51,7 +52,8 @@ def test_every_football_data_name_resolves_to_that_leagues_clubs(conn, league_id
     df = load_seasons(lg.fd_code, YEARS)
     names = set(df["home"]) | set(df["away"])
     ids = TeamResolver(conn).resolve_all("footballdata", names)
-    assert len(set(ids.values())) == EXPECTED_CLUBS[league_id]  # every club once: no split, no merge
+    # every club once: no split, no merge. The Championship's football-data names also include clubs that belong to the Premier League in our table (promoted and relegated sides).
+    assert len(set(ids.values())) == FOOTBALLDATA_CLUBS.get(league_id, EXPECTED_CLUBS[league_id])
 
 
 @pytest.mark.parametrize("league_id", ["LALIGA", "BUNDESLIGA", "SERIEA", "LIGUE1"])

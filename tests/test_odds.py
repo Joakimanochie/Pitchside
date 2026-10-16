@@ -42,8 +42,8 @@ def test_edge_and_expected_value():
 # ---- parsing fixtures.csv ----------------------------------------------------------------------------------------
 
 def test_parse_reads_three_markets_for_each_bookmaker_and_skips_other_leagues():
-    championship = "E1,17/10/2026,15:00,Burnley,Charlton,1.6,3.7,5.2,1.7,4,5.5,1.6,3.9,5.2,1.8,2,1.9,2,1.8,1.9,-0.5,1.8,2,1.8,2,1.8,2"
-    rows = parse(f"﻿{HEADER}\n{EPL_ROW}\n{championship}")      # the real file starts with a byte-order mark
+    scottish = "SC0,17/10/2026,15:00,Burnley,Charlton,1.6,3.7,5.2,1.7,4,5.5,1.6,3.9,5.2,1.8,2,1.9,2,1.8,1.9,-0.5,1.8,2,1.8,2,1.8,2"
+    rows = parse(f"﻿{HEADER}\n{EPL_ROW}\n{scottish}")      # the real file starts with a byte-order mark
     assert {r.league_id for r in rows} == {"EPL"}
     assert len(rows) == 3 * (3 + 2 + 2)     # three bookmakers x (1X2 + over/under + handicap)
     ah = [r for r in rows if r.market_id == "asian_handicap" and r.bookmaker == "avg"]

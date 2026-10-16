@@ -11,7 +11,7 @@ from pathlib import Path
 
 import psycopg
 
-from pitchside.confidence import TIERS, load_rules, tier_for
+from pitchside.confidence import RATED_LEAGUES, TIERS, UNRATED, load_rules, tier_for
 from pitchside.leagues import LEAGUES
 from pitchside.markets.registry import MARKETS
 
@@ -60,7 +60,7 @@ def live_record(conn: psycopg.Connection, version: str) -> dict:
     """Settled predictions of the current model version, from v_settled (live runs only, never backtests)."""
     base = {sel: float(v) for sel, v in conn.execute(
         "SELECT CASE WHEN ft_home > ft_away THEN 'home' WHEN ft_home = ft_away THEN 'draw' ELSE 'away' END, count(*)::float / sum(count(*)) OVER () "
-        "FROM matches WHERE status = 'finished' AND season >= 2019 AND ft_home IS NOT NULL GROUP BY 1")}
+        "FROM matches WHERE status = 'finished' AND season >= 2019 AND ft_home IS NOT NULL AND league_id = ANY(%s) GROUP BY 1", (list(RATED_LEAGUES),))}
     rows = conn.execute(
         "SELECT s.match_id, s.league_id, m.match_date, th.canonical_name, ta.canonical_name, m.ft_home, m.ft_away, s.selection, s.probability, s.outcome_value "
         "FROM v_settled s JOIN matches m ON m.id = s.match_id JOIN teams th ON th.id = m.home_team_id JOIN teams ta ON ta.id = m.away_team_id "
@@ -153,6 +153,7 @@ def build_snapshot(conn: psycopg.Connection) -> dict:
         "JOIN teams th ON th.id = m.home_team_id JOIN teams ta ON ta.id = m.away_team_id "
         "WHERE r.model_version_id = %s AND r.run_type = 'weekly' AND m.status = 'scheduled' ORDER BY m.kickoff, m.id", (version,)).fetchall()
     ids = [m[0] for m in matches]
+    league_of = {m[0]: m[1] for m in matches}
     ctx = {mid: c for mid, c in conn.execute(
         "SELECT c.match_id, c.context FROM prediction_context c JOIN prediction_runs r ON r.id = c.run_id "
         "WHERE r.model_version_id = %s AND c.match_id = ANY(%s)", (version, ids))}
@@ -162,7 +163,9 @@ def build_snapshot(conn: psycopg.Connection) -> dict:
             "JOIN prediction_runs r ON r.id = p.run_id WHERE r.model_version_id = ANY(%s) AND r.run_type = 'weekly' "
             "AND p.match_id = ANY(%s) AND (r.model_version_id NOT LIKE 'players-%%' OR r.id = (SELECT r2.id FROM prediction_runs r2 JOIN predictions p2 ON p2.run_id = r2.id "
             "WHERE p2.match_id = p.match_id AND r2.model_version_id LIKE 'players-%%' AND r2.run_type = 'weekly' ORDER BY r2.created_at DESC LIMIT 1)) ORDER BY p.id", (versions, ids)):
-        tier = TIERS.index(tier_for(rules, market_id, MARKETS[market_id].family, float(prob))) if market_id in MARKETS else 2
+        if market_id in MARKETS and MARKETS[market_id].family == 'I' and league_of[mid] not in RATED_LEAGUES:
+            continue            # no player markets for leagues without shot data
+        tier = (UNRATED if league_of[mid] not in RATED_LEAGUES else TIERS.index(tier_for(rules, market_id, MARKETS[market_id].family, float(prob)))) if market_id in MARKETS else 2
         preds[mid][market_id]["null" if line is None else str(float(line))].append([sel, round(float(prob), 4), 1 if pick else 0, tier])
 
     # the live record belongs to the newest model version that already has scored matches

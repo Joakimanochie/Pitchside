@@ -2,6 +2,7 @@
 import numpy as np
 import psycopg
 
+from pitchside.confidence import RATED_LEAGUES
 from pitchside.models.split_table import HalfSplitTable
 from pitchside.sim.timing import GoalTimeProfile
 
@@ -9,10 +10,10 @@ MIN_SPLIT_MATCHES = 1000
 
 
 def fit_split_table(conn: psycopg.Connection) -> HalfSplitTable:
-    """P(half-time score | full-time score) from every finished match with a half-time score, all leagues pooled."""
+    """P(half-time score | full-time score) from every finished match of the five rated leagues with a half-time score, pooled."""
     rows = conn.execute(
         "SELECT ht_home, ht_away, ft_home, ft_away FROM matches "
-        "WHERE status = 'finished' AND ht_home IS NOT NULL AND ht_away IS NOT NULL").fetchall()
+        "WHERE status = 'finished' AND ht_home IS NOT NULL AND ht_away IS NOT NULL AND league_id = ANY(%s)", (list(RATED_LEAGUES),)).fetchall()
     if len(rows) < MIN_SPLIT_MATCHES:
         raise ValueError(f"only {len(rows)} matches with a half-time score; need at least {MIN_SPLIT_MATCHES}")
     a = np.array(rows, dtype=int)

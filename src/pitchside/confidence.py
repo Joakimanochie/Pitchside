@@ -28,6 +28,10 @@ MIN_CELL = 200
 BASE_FLOOR = 0.005
 RULES_PATH = Path(__file__).resolve().parents[2] / "data" / "confidence_rules.json"
 TIERS = ("High", "Medium", "Low")
+UNRATED = 3        # tier shown for leagues the ratings were not built from
+# The ratings and the half-time/goal-timing inputs come from tests on these five leagues. Other leagues (the Championship) get predictions
+# from the same models, but no confidence rating until their own backtest exists.
+RATED_LEAGUES = ("EPL", "LALIGA", "BUNDESLIGA", "SERIEA", "LIGUE1")
 
 
 def band_of(p: float) -> int:

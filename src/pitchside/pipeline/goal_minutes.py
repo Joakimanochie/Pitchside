@@ -13,6 +13,7 @@ import pandas as pd
 import psycopg
 
 from pitchside.db.teams import TeamResolver
+from pitchside.ingest.espn_goals import ingest_espn_goals
 from pitchside.ingest.footballdata import current_season
 from pitchside.ingest.understat_goals import SOURCE, load_goals, load_shots
 from pitchside.leagues import LEAGUES
@@ -39,6 +40,8 @@ def pending_matches(conn: psycopg.Connection, league_id: str, season: int) -> se
 
 def ingest_goal_minutes(conn: psycopg.Connection, league_id: str, season: int | None = None,
                         client_factory: Callable = understat_client) -> dict:
+    if LEAGUES[league_id].understat is None:      # no Understat coverage: this league's goal minutes come from ESPN
+        return ingest_espn_goals(conn, league_id, LEAGUES[league_id].espn_code, (datetime.now(UTC) - timedelta(days=RETRY_DAYS)).date())
     season = current_season() if season is None else season
     pending = pending_matches(conn, league_id, season)
     if not pending:
