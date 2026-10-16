@@ -279,3 +279,16 @@ and scored on matches from 2026 onward (about 52,000 player-matches).
 
 Calibration is close for ordinary players; the very likely scorers (30-40% predicted) scored more often than predicted (42% against 33%). Rotation, injuries and suspensions are unknown, which is why the whole family is labelled experimental
 and why a player who did not play is settled as a loss. Confidence ratings for family I come from the same rule as the others.
+
+## Rating clubs across leagues (tested, not adopted)
+
+A club that changes league is rated, in the single-league model, only on its matches in the new league. `models/pyramid.py` fits the Premier League and the Championship together instead: each club has one attack and one defence rating, and the leagues differ by the average rating of their clubs (fitted from the clubs that moved). Walk-forward from 2022/23, production 0.3.0 settings, 14-day refits (`scripts/backtest_pyramid.py`), match-result log loss, lower is better:
+
+| Matches | Single league | Across leagues | Difference (t) |
+|---|---|---|---|
+| Championship, all (2,316) | 1.0539 | 1.0523 | -0.0017 (-1.1) |
+| Championship, a club that came down from the Premier League (318) | 1.0279 | 1.0102 | -0.0177 (-2.0) |
+| Premier League, all (1,580) | 0.9960 | 1.0015 | +0.0055 (+2.3) |
+| Premier League, a club that came up (306) | 0.9263 | 0.9447 | +0.0184 (+1.9) |
+
+So carrying a rating down a league helps a little, but carrying it up hurts: one league-average gap does not fit both directions (promoted clubs are rated too highly), and the Championship gain is not consistent from season to season (worse in 2024/25). Not adopted: production keeps one fit per league. It is the starting point for the Champions League and Europa League, where clubs from many leagues meet.
