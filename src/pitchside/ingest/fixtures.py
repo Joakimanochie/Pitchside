@@ -54,11 +54,11 @@ def fetch_fixtures(espn_code: str, start: date, days: int, session: requests.Ses
     return unique
 
 
-def upsert_fixtures(conn: psycopg.Connection, league_id: str, fixtures: list[dict]) -> dict:
+def upsert_fixtures(conn: psycopg.Connection, league_id: str, fixtures: list[dict], ids: dict[str, int] | None = None) -> dict:
     """Insert scheduled fixtures; mark called-off ones postponed. Never touches a finished match.
     Raises UnknownTeamsError (writing nothing) if ESPN uses a club name we have not mapped."""
-    resolver = TeamResolver(conn)
-    ids = resolver.resolve_all("espn", [n for f in fixtures for n in (f["home"], f["away"])])
+    if ids is None:        # cup fixtures arrive with their clubs already resolved (and created when new)
+        ids = TeamResolver(conn).resolve_all("espn", [n for f in fixtures for n in (f["home"], f["away"])])
     scheduled = postponed = 0
     for f in fixtures:
         home_id, away_id = ids[f["home"]], ids[f["away"]]

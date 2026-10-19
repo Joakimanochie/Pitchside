@@ -322,3 +322,19 @@ Data: ESPN match summaries (cards with minutes, each player's fouls and cards) f
 | Fouls won 1+ / 2+ / 3+ | +11.9% / +9.7% / +8.8% |
 
 Confidence ratings from the same rule as the other families: fouls High, to be carded Medium, the card timing markets Low. The checked ordering High > Medium > Low still holds (skill +9.4%, +4.7%, +1.1% on 1,917 held-out matches).
+
+## Champions League and Europa League (2026-10-19)
+
+Data: results with half-time scores for 2,310 cup matches from openfootball (public domain; Champions League 2015/16 to 2025/26, Europa League 2020/21 to 2024/25; the score of record is the 90-minute score, read from the `a.e.t.` lines as (score at 90 minutes, half time)), team statistics, cards and players' fouls from ESPN match summaries, and the domestic results already held. Clubs of the five leagues and the Championship are matched to the clubs in the database (all 69 cup clubs of those countries matched); the 88 other clubs are created from the cup data.
+
+Model (`models/pyramid.py`, `scripts/backtest_cups.py`): every club has one attack and one defence rating, fitted on domestic and cup matches together; each competition has its own goal level; each club is pulled toward the average of its domestic league (the Premier League fixed at zero), and clubs with no domestic data toward a shared "other" group, which is also how a club never seen is rated. An earlier test of carrying ratings across the Premier League and the Championship alone gave no stable gain; here the cup matches themselves link the leagues. Weekly walk-forward from 2021/22 (1,363 matches), match-result log loss, lower is better:
+
+| Matches | Usual frequencies | Cup matches only | Cross-league model |
+|---|---|---|---|
+| All | 1.0425 | 0.9562 | 0.9457 |
+| Champions League | 1.0303 | 0.9183 | 0.9148 |
+| Europa League | 1.0576 | 1.0029 | 0.9838 |
+| Neither club from the six leagues | 1.0597 | 1.0119 | 1.0002 |
+| 2024/25 on | 1.0208 | 0.9466 | 0.9497 |
+
+The result markets beat the usual frequencies by about 9%. Over/under 2.5 goals (0.6811 against 0.6815) and both teams to score (0.6958 against 0.6917) are no better than the usual frequencies. The edge of the cross-league model over cup-only is small and was not there in 2024/25 on. An ECC machine-learning review of the design found no look-ahead leakage and no error in the gradient; it asked for a fairer cup-only comparison, a default rating for unseen clubs (both done) and a check of the extra-time parsing (done on four known finals and semi-finals). Not yet tested: home advantage and the low-score correction are shared with the domestic leagues although some cup matches are on neutral ground, and the settings (memory, shrinkage) are the domestic ones.

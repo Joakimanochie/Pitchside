@@ -7,6 +7,7 @@ A goal in stoppage time (45'+3', 90'+5') keeps the minute it was added to (45, 9
 """
 import json
 import re
+from datetime import date
 
 import psycopg
 import requests
@@ -33,6 +34,8 @@ def parse_goals(payload: dict, home: str, away: str) -> list[dict] | None:
         team = e.get("team", {}).get("displayName")
         minute = _minute(e.get("clock", {}).get("displayValue", ""))
         period = e.get("period", {}).get("number")
+        if period is not None and period >= 3:
+            continue                            # extra time and the shoot-out (cup knockouts): every market is settled on the 90 minutes
         if team not in (home, away) or minute is None or period not in (1, 2):
             return None                         # a goal we cannot place: do not guess
         who = (e.get("participants") or [{}])[0].get("athlete", {}).get("displayName")
@@ -49,13 +52,14 @@ def verified(goals: list[dict], ft: tuple[int, int], ht: tuple[int, int]) -> boo
     return True
 
 
-def ingest_espn_goals(conn: psycopg.Connection, league_id: str, espn_code: str, retry_from, session: requests.Session | None = None) -> dict:
+def ingest_espn_goals(conn: psycopg.Connection, league_id: str, espn_code: str, retry_from, session: requests.Session | None = None, since=None) -> dict:
     """Fetch goal minutes for this league's finished matches that have an ESPN id and no verdict yet (or a failed one in the last days)."""
     rows = conn.execute(
         "SELECT m.id, m.home_team_id, m.away_team_id, m.ft_home, m.ft_away, m.ht_home, m.ht_away, m.source_ids->>'espn', th.canonical_name, ta.canonical_name "
         "FROM matches m JOIN teams th ON th.id = m.home_team_id JOIN teams ta ON ta.id = m.away_team_id "
         "WHERE m.league_id = %s AND m.status = 'finished' AND m.source_ids ? 'espn' AND m.ht_home IS NOT NULL "
-        "AND (NOT (m.source_ids ? 'goal_minutes') OR (m.source_ids->>'goal_minutes' = 'false' AND m.match_date >= %s))", (league_id, retry_from)).fetchall()
+        "AND (NOT (m.source_ids ? 'goal_minutes') OR (m.source_ids->>'goal_minutes' = 'false' AND m.match_date >= %s)) AND m.match_date >= %s",
+        (league_id, retry_from, since or date.min)).fetchall()
     http = session or requests
     loaded = unverified = unavailable = 0
     for match_id, home_id, away_id, fh, fa, hh, ha, event, home, away in rows:

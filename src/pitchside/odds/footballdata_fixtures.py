@@ -17,7 +17,7 @@ from pitchside.odds.provider import OddsRow
 URL = "https://football-data.co.uk/fixtures.csv"
 HEADERS = {"User-Agent": "Mozilla/5.0 (Pitchside odds snapshot)"}
 BOOKMAKERS = {"avg": "Avg", "max": "Max", "b365": "B365"}
-FD_TO_LEAGUE = {lg.fd_code: lg.id for lg in LEAGUES.values()}
+FD_TO_LEAGUE = {lg.fd_code: lg.id for lg in LEAGUES.values() if lg.fd_code}
 
 
 def _num(row: dict, col: str) -> float | None:

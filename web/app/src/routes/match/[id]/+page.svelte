@@ -16,6 +16,7 @@
 
 	const x12 = $derived(Object.fromEntries((match.preds['1x2']?.null ?? []).map((r) => [r[0], r[3]])) as Record<string, number>);
 	const c = $derived(match.ctx);
+	const isCup = $derived(match.league === 'CL' || match.league === 'EL');
 </script>
 
 <svelte:head><title>{match.home} v {match.away} · Pitchside</title></svelte:head>
@@ -41,10 +42,10 @@
 		<div class="why">
 			<dl>
 				<div><dt>Expected goals</dt><dd>{match.home} {Number(c.lambda_home).toFixed(2)} · {match.away} {Number(c.lambda_away).toFixed(2)}</dd></div>
-				<div><dt>History used</dt><dd>{Number(c.matches_used).toLocaleString()} finished {index.leagues[match.league]} matches</dd></div>
+				<div><dt>History used</dt><dd>{Number(c.matches_used).toLocaleString()} finished {isCup ? 'domestic and European' : index.leagues[match.league]} matches</dd></div>
 				<div><dt>Goals before half-time</dt><dd>{((c.first_half_goal_share ?? 0) * 100).toFixed(1)}% of all goals</dd></div>
 				<div><dt>Simulated matches</dt><dd>{Number(c.n_sims).toLocaleString()}</dd></div>
-				<div><dt>Model</dt><dd>{index.model_version}</dd></div>
+				<div><dt>Model</dt><dd>{isCup ? 'goalscup-dc-0.1.0' : index.model_version}</dd></div>
 			</dl>
 			<p class="span">Lineups, injuries and suspensions are not used yet. The model knows past scores, how goals split between the halves, and when in a match goals tend to happen.</p>
 		</div>
@@ -52,6 +53,14 @@
 
 	{#if match.league === 'CHAMP'}
 		<p class="span" style="margin-top:1rem">Championship predictions are new. They come from the same models as the top five leagues, but the confidence bars are not rated here yet (empty bars): they are built from tests on the top five leagues, and the Championship is harder to predict. Player markets are not available for this league.</p>
+	{/if}
+
+	{#if match.league === 'CL' || match.league === 'EL'}
+		<p class="span" style="margin-top:1rem">
+			European cup predictions are new and experimental. Clubs from different countries are compared using their domestic and European results together. In tests on past cup matches the result markets
+			(win, draw, double chance, handicaps) were clearly better than the usual frequencies; goals totals and both teams to score were no better than them. Everything is for the first 90 minutes only: extra time and penalties
+			are not included. The confidence bars are not rated yet (empty bars), and there are no goalscorer, shots or assist markets.
+		</p>
 	{/if}
 
 	<KeyNumbers preds={match.preds} {index} {ctx} />

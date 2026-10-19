@@ -124,7 +124,7 @@ def live_lines(conn: psycopg.Connection) -> list[dict]:
             "WHERE r.run_type = 'weekly' GROUP BY 1 ORDER BY 1 DESC"):
         if version not in seen:
             out.append({"version": version, "matches": 0, "selections": 0, "predicted": None, "actual": None, "log_loss": None, "calibration": [], "stored_for": int(n)})
-    line = {"goals": 0, "counts": 1, "players": 2}
+    line = {"goals": 0, "goalscup": 1, "counts": 2, "cardtime": 3, "players": 4}
     return sorted(out, key=lambda o: (line.get(o["version"].split("-")[0], 9), [-ord(c) for c in o["version"]]))
 
 
@@ -143,22 +143,24 @@ def build_snapshot(conn: psycopg.Connection) -> dict:
     order = {mid: i for i, mid in enumerate(MARKETS)}
     rules = load_rules()
     version = conn.execute("SELECT model_version_id FROM prediction_runs WHERE run_type = 'weekly' AND model_version_id LIKE 'goals-%' ORDER BY created_at DESC LIMIT 1").fetchone()[0]
+    cup = conn.execute("SELECT model_version_id FROM prediction_runs WHERE run_type = 'weekly' AND model_version_id LIKE 'goalscup-%' ORDER BY created_at DESC LIMIT 1").fetchone()
+    goal_versions = [version] + ([cup[0]] if cup else [])      # the domestic leagues and the cups are one family on the page
     # the count models (corners, cards, shots) are their own model line; predictions from the newest of each line are shown together
     counts = conn.execute("SELECT model_version_id FROM prediction_runs WHERE run_type = 'weekly' AND model_version_id LIKE 'counts-%' ORDER BY created_at DESC LIMIT 1").fetchone()
     # player markets: every match shows its newest player prediction (the weekly one, or the lineup-aware one made once the lineup was named)
     player_versions = [r[0] for r in conn.execute("SELECT DISTINCT model_version_id FROM prediction_runs WHERE run_type = 'weekly' AND model_version_id LIKE 'players-%'")]
     timing = conn.execute("SELECT model_version_id FROM prediction_runs WHERE run_type = 'weekly' AND model_version_id LIKE 'cardtime-%' ORDER BY created_at DESC LIMIT 1").fetchone()
-    versions = [version] + ([counts[0]] if counts else []) + ([timing[0]] if timing else []) + player_versions
+    versions = goal_versions + ([counts[0]] if counts else []) + ([timing[0]] if timing else []) + player_versions
     matches = conn.execute(
         "SELECT DISTINCT m.id, m.league_id, m.kickoff, th.canonical_name, ta.canonical_name, m.home_team_id, m.away_team_id FROM predictions p "
         "JOIN prediction_runs r ON r.id = p.run_id JOIN matches m ON m.id = p.match_id "
         "JOIN teams th ON th.id = m.home_team_id JOIN teams ta ON ta.id = m.away_team_id "
-        "WHERE r.model_version_id = %s AND r.run_type = 'weekly' AND m.status = 'scheduled' ORDER BY m.kickoff, m.id", (version,)).fetchall()
+        "WHERE r.model_version_id = ANY(%s) AND r.run_type = 'weekly' AND m.status = 'scheduled' ORDER BY m.kickoff, m.id", (goal_versions,)).fetchall()
     ids = [m[0] for m in matches]
     league_of = {m[0]: m[1] for m in matches}
     ctx = {mid: c for mid, c in conn.execute(
         "SELECT c.match_id, c.context FROM prediction_context c JOIN prediction_runs r ON r.id = c.run_id "
-        "WHERE r.model_version_id = %s AND c.match_id = ANY(%s)", (version, ids))}
+        "WHERE r.model_version_id = ANY(%s) AND c.match_id = ANY(%s)", (goal_versions, ids))}
     preds: dict = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
     for mid, market_id, line, sel, prob, pick in conn.execute(
             "SELECT p.match_id, p.market_id, p.line, p.selection, p.probability, p.is_pick FROM predictions p "

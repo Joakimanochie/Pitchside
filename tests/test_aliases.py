@@ -39,10 +39,10 @@ def test_club_counts_per_league():
     for r in rows():
         clubs[r["league"]].add(r["canonical"])
     assert {lg: len(c) for lg, c in clubs.items()} == EXPECTED_CLUBS
-    assert set(clubs) == set(LEAGUES)
+    assert set(clubs) == {lid for lid, lg in LEAGUES.items() if not lg.cup}      # the cups' clubs are created from cup data, not listed in the aliases file
 
 
-@pytest.mark.parametrize("league_id", sorted(LEAGUES))
+@pytest.mark.parametrize("league_id", sorted(lid for lid, lg in LEAGUES.items() if not lg.cup))
 def test_every_football_data_name_resolves_to_that_leagues_clubs(conn, league_id):
     lg = LEAGUES[league_id]
     if not all((RAW_DIR / f"{season_code(y)}_{lg.fd_code}.csv").exists() for y in YEARS):

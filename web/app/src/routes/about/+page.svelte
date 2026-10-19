@@ -18,6 +18,7 @@
 			<li><strong>Corners, cards, shots and shots on target</strong>: the same idea with counts of those things instead of goals. <strong>Card timing</strong> (cards in each half, the first card, a card by a given minute) splits a match’s expected cards using when cards usually come.</li>
 			<li><strong>Player markets</strong> (experimental): each player’s recent share of his club’s goals, shots and assists, combined with the club’s expected goals in the match, and his recent cards and fouls. Lineups are not known, so these are rough guides.</li>
 			<li><strong>The Championship</strong> uses the same models, but is newer here: its confidence bars are not rated yet and it has no player markets, because the shot data those need does not cover it.</li>
+			<li><strong>The Champions League and Europa League</strong> are new and experimental. Clubs from different countries are rated on one scale from their domestic and European results; in tests the result markets beat the usual frequencies, while goals totals and both teams to score did not. Only the first 90 minutes are predicted, and the confidence bars are not rated yet.</li>
 			<li><strong>Bookmaker prices</strong> are shown for comparison only. They are never used to make a prediction.</li>
 		</ul>
 		<p>Results and team statistics come from football-data.co.uk, shot and expected-goals data from Understat, and fixtures from a public scoreboard feed.</p>

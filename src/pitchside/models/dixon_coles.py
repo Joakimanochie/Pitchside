@@ -93,6 +93,8 @@ class DixonColes:
     n_matches: int = 0
     level_shift: float = 0.0
     ref_log_total: float = 0.0
+    default_attack: float = 0.0    # rating of a club never seen in training (0 = the league average for a single-league fit)
+    default_defence: float = 0.0
 
     def fit(self, matches: pd.DataFrame, as_of: date) -> "DixonColes":
         """matches: columns match_date, home, away, ft_home, ft_away (and optionally xg_home, xg_away). Uses only rows dated before as_of."""
@@ -156,8 +158,8 @@ class DixonColes:
 
     def lambdas(self, home: str, away: str) -> tuple[float, float]:
         """Expected goals. A team never seen in training gets the league-average rating (0, 0)."""
-        a_h, d_h = self.attack.get(home, 0.0), self.defence.get(home, 0.0)
-        a_a, d_a = self.attack.get(away, 0.0), self.defence.get(away, 0.0)
+        a_h, d_h = self.attack.get(home, self.default_attack), self.defence.get(home, self.default_defence)
+        a_a, d_a = self.attack.get(away, self.default_attack), self.defence.get(away, self.default_defence)
         lam_h, lam_a = float(np.exp(self.mu + self.home_adv + a_h - d_a)), float(np.exp(self.mu + a_a - d_h))
         if self.total_compression != 1.0:
             k = float(np.exp((self.total_compression - 1.0) * (np.log(lam_h + lam_a) - self.ref_log_total)))

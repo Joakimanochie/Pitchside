@@ -15,6 +15,7 @@ import pandas as pd
 import psycopg
 
 from pitchside.confidence import RATED_LEAGUES
+from pitchside.db.cup_teams import CupTeams
 from pitchside.db.markets import seed_markets
 from pitchside.db.migrate import _load_env, apply_migrations
 from pitchside.db.predictions import (
@@ -24,6 +25,13 @@ from pitchside.db.predictions import (
     write_predictions,
 )
 from pitchside.db.teams import load_aliases, seed_leagues
+from pitchside.ingest.espn_cups import (
+    fetch_finished,
+    fetch_summary,
+    parse_result,
+    season_of,
+    store_result,
+)
 from pitchside.ingest.espn_log import ingest_log
 from pitchside.ingest.fixtures import fetch_fixtures, upsert_fixtures
 from pitchside.ingest.footballdata import current_season, load_seasons
@@ -52,6 +60,7 @@ from pitchside.models.players import (
     shrunk_card_rate,
     team_rates,
 )
+from pitchside.models.pyramid import PyramidDixonColes
 from pitchside.odds.footballdata_fixtures import FootballDataFixtures
 from pitchside.odds.store import store_odds
 from pitchside.pipeline.goal_minutes import ingest_goal_minutes
@@ -60,6 +69,7 @@ from pitchside.sim.inputs import fit_split_table, fit_time_profile
 from pitchside.sim.pricing import price_all
 
 MODEL_VERSION = "goals-dc-0.3.0"   # 0.1.0 priced family A only; 0.2.0 adds the half/goal-timing simulator (B-E); 0.3.0 follows the recent scoring level and compresses totals
+CUP_MODEL_VERSION = "goalscup-dc-0.1.0"   # the Champions League and Europa League: the same Dixon-Coles goals model, but clubs rated across leagues (models/pyramid.py); its own line so it never mixes with the domestic leagues
 FEATURE_VERSION = "scores-only-v1"
 COUNT_MODEL_VERSION = "counts-nb-0.1.0"   # corners, cards, shots and shots on target: its own model line, so adding it never reopens goals predictions
 COUNT_FEATURE_VERSION = "team-stats-v1"
@@ -76,6 +86,7 @@ def make_model() -> DixonColes:
 
 
 MIN_HISTORY_MATCHES = 1000  # about 2.5 seasons of one league; below this the strengths are too noisy to publish
+MIN_CUP_STATS_MATCHES = 500    # a cup has about 190 matches a season and few clubs repeat; the count model's heavy shrinkage carries the clubs with little data
 
 
 class InsufficientHistoryError(RuntimeError):
@@ -83,8 +94,10 @@ class InsufficientHistoryError(RuntimeError):
 
 
 def ingest_results(conn: psycopg.Connection, league_id: str, seasons_back: int = 1) -> dict:
-    """Refresh results for the current season and the previous one (late corrections), logged in ingest_log."""
+    """Refresh results for the current season and the previous one (late corrections), logged in ingest_log. The European cups have no football-data file: see ingest_cup_results."""
     lg = LEAGUES[league_id]
+    if lg.cup:
+        return ingest_cup_results(conn, league_id)
     end = current_season()
     years = list(range(end - seasons_back, end + 1))
     log_id = conn.execute("INSERT INTO ingest_log (source, league_id, season) VALUES ('footballdata', %s, %s) RETURNING id",
@@ -103,8 +116,33 @@ def ingest_results(conn: psycopg.Connection, league_id: str, seasons_back: int =
     return out
 
 
+def ingest_cup_results(conn: psycopg.Connection, league_id: str, days_back: int = 4) -> dict:
+    """Finished cup matches of the last few days, from ESPN: the 90-minute score, half-time score and team statistics (extra time and penalties are left out)."""
+    lg = LEAGUES[league_id]
+    teams = CupTeams(conn)
+    today = datetime.now(UTC).date()
+    stored = skipped = 0
+    for i in range(days_back):
+        for event in fetch_finished(lg.espn_code, today - timedelta(days=i)):
+            local = event["kickoff"]
+            home, away = teams.resolve("espn", event["home"]), teams.resolve("espn", event["away"])
+            parsed = parse_result(fetch_summary(lg.espn_code, event["id"]), event["beyond_90"])
+            if parsed is None:
+                skipped += 1
+                continue
+            store_result(conn, league_id, season_of(local.date()), event, parsed, home, away)
+            stored += 1
+    conn.commit()
+    return {"matches": stored, "skipped": skipped, "new_clubs": teams.created}
+
+
 def plan_fixtures(conn: psycopg.Connection, league_id: str, start: date, days: int) -> dict:
-    out = upsert_fixtures(conn, league_id, fetch_fixtures(LEAGUES[league_id].espn_code, start, days))
+    fixtures = fetch_fixtures(LEAGUES[league_id].espn_code, start, days)
+    ids = None
+    if LEAGUES[league_id].cup:
+        teams = CupTeams(conn)
+        ids = {n: teams.resolve("espn", n) for f in fixtures for n in (f["home"], f["away"])}
+    out = upsert_fixtures(conn, league_id, fixtures, ids)
     conn.commit()
     return out
 
@@ -117,6 +155,31 @@ def load_history(conn: psycopg.Connection, league_id: str) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=["season", "match_date", "home", "away", "ft_home", "ft_away"])
 
 
+DOMESTIC_LEAGUES = ("EPL", "LALIGA", "BUNDESLIGA", "SERIEA", "LIGUE1", "CHAMP")
+
+
+def load_cross_history(conn: psycopg.Connection, comp: str) -> pd.DataFrame:
+    """Domestic matches of the six leagues and the cup matches together, one row each, with the competition in `league` (the history a cup model is fitted on)."""
+    rows = conn.execute(
+        "SELECT m.league_id, m.season, m.match_date, th.canonical_name, ta.canonical_name, m.ft_home, m.ft_away "
+        "FROM matches m JOIN teams th ON th.id = m.home_team_id JOIN teams ta ON ta.id = m.away_team_id "
+        "WHERE m.status = 'finished' AND m.ft_home IS NOT NULL AND m.league_id = ANY(%s) ORDER BY m.match_date, m.id", (list(DOMESTIC_LEAGUES) + ["CL", "EL"],)).fetchall()
+    return pd.DataFrame(rows, columns=["league", "season", "match_date", "home", "away", "ft_home", "ft_away"])
+
+
+def make_cross_model(comp: str, history: pd.DataFrame, as_of: date) -> PyramidDixonColes:
+    """The goals model for a cup: every club rated on one scale from its domestic and European matches together (models/pyramid.py). A club of none of the six leagues
+    belongs to the shared group "OTHER", and a club never seen is rated as an average member of it."""
+    domestic = history[history["league"].isin(DOMESTIC_LEAGUES)]
+    group = {}
+    for r in domestic[domestic["match_date"] < as_of].sort_values("match_date", kind="stable").itertuples(index=False):
+        group[r.home] = r.league
+        group[r.away] = r.league
+    return PyramidDixonColes(half_life_days=MODEL_PARAMS["half_life_days"], ridge=MODEL_PARAMS["ridge"], level_window_days=MODEL_PARAMS["level_window_days"],
+                             level_shrink=MODEL_PARAMS["level_shrink"], total_compression=MODEL_PARAMS["total_compression"],
+                             target_league=comp, team_group=group, ref_group="EPL").fit(history, as_of=as_of)
+
+
 def predict_week(conn: psycopg.Connection, league_id: str, as_of: date, days: int, force: bool = False,
                  n_sims: int = N_SIMS) -> dict:
     """Fit on matches before `as_of`, price every market for fixtures kicking off in the next `days` days.
@@ -127,7 +190,7 @@ def predict_week(conn: psycopg.Connection, league_id: str, as_of: date, days: in
     not_yet_predicted = "" if force else (
         "AND NOT EXISTS (SELECT 1 FROM predictions p JOIN prediction_runs r ON r.id = p.run_id "
         "WHERE p.match_id = m.id AND r.run_type = 'weekly' AND r.model_version_id = %s) ")
-    params = [league_id, as_of, as_of + timedelta(days=days), now] + ([] if force else [MODEL_VERSION])
+    params = [league_id, as_of, as_of + timedelta(days=days), now] + ([] if force else [CUP_MODEL_VERSION if LEAGUES[league_id].cup else MODEL_VERSION])
     fixtures = conn.execute(
         "SELECT m.id, m.kickoff, th.canonical_name, ta.canonical_name FROM matches m "
         "JOIN teams th ON th.id = m.home_team_id JOIN teams ta ON ta.id = m.away_team_id "
@@ -138,18 +201,21 @@ def predict_week(conn: psycopg.Connection, league_id: str, as_of: date, days: in
 
     cutoff = datetime.combine(as_of, time.min, tzinfo=UTC)
 
-    history = load_history(conn, league_id)
+    cup = LEAGUES[league_id].cup
+    history = load_cross_history(conn, league_id) if cup else load_history(conn, league_id)
     if len(history) < MIN_HISTORY_MATCHES:
         raise InsufficientHistoryError(
             f"{league_id}: only {len(history)} finished matches in the database, need at least {MIN_HISTORY_MATCHES}. "
             f"Run: uv run python scripts/load_history.py {league_id}")
-    model = make_model().fit(history, as_of=as_of)
+    model = make_cross_model(league_id, history, as_of) if cup else make_model().fit(history, as_of=as_of)
     split = fit_split_table(conn)
     profile = fit_time_profile(conn)       # None when too few verified goal minutes exist: then only family A is priced
     families = "ABCDE" if profile is not None else "A"
     seed_markets(conn)
-    ensure_model_version(conn, MODEL_VERSION, "Dixon-Coles goals model plus half-time split and goal-timing simulator", MODEL_PARAMS)
-    run_id = create_run(conn, "weekly", MODEL_VERSION, FEATURE_VERSION, cutoff,
+    version_id = CUP_MODEL_VERSION if cup else MODEL_VERSION
+    ensure_model_version(conn, version_id, "Dixon-Coles goals model plus half-time split and goal-timing simulator" + (", clubs rated across leagues" if cup else ""),
+                         {**MODEL_PARAMS, "cross_league": True} if cup else MODEL_PARAMS)
+    run_id = create_run(conn, "weekly", version_id, FEATURE_VERSION, cutoff,
                         notes=f"{league_id}, {len(fixtures)} fixtures, window {as_of} + {days} days, families {families}")
     total = 0
     for match_id, kickoff, home, away in fixtures:
@@ -192,8 +258,9 @@ def predict_counts(conn: psycopg.Connection, league_id: str, as_of: date, days: 
     if not fixtures:
         return {"run_id": None, "matches": 0, "predictions": 0, "note": "no upcoming fixtures in the window"}
     history = load_count_history(conn, league_id)
-    if len(history) < MIN_HISTORY_MATCHES:
-        raise InsufficientHistoryError(f"{league_id}: only {len(history)} matches with team statistics, need at least {MIN_HISTORY_MATCHES}")
+    need = MIN_CUP_STATS_MATCHES if LEAGUES[league_id].cup else MIN_HISTORY_MATCHES
+    if len(history) < need:
+        raise InsufficientHistoryError(f"{league_id}: only {len(history)} matches with team statistics, need at least {need}")
     models = {}
     for stat, cfg in COUNT_STATS.items():
         data = history.assign(count_home=history[f"{stat}_h"], count_away=history[f"{stat}_a"])

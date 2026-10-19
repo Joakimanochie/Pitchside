@@ -11,6 +11,7 @@ class League:
     understat: str | None   # soccerdata league key; None where Understat has no coverage (no player or shot data, goal minutes come from ESPN)
     espn_code: str
     tier: int = 1
+    cup: bool = False   # a European cup: results come from ESPN, there is no football-data file, and clubs from many countries meet
 
 
 LEAGUES: dict[str, League] = {
@@ -22,5 +23,7 @@ LEAGUES: dict[str, League] = {
         League("SERIEA", "Serie A", "Italy", "I1", "ITA-Serie A", "ita.1"),
         League("LIGUE1", "Ligue 1", "France", "F1", "FRA-Ligue 1", "fra.1"),
         League("CHAMP", "Championship", "England", "E1", None, "eng.2", tier=2),
+        League("CL", "Champions League", "Europe", "", None, "uefa.champions", tier=0, cup=True),
+        League("EL", "Europa League", "Europe", "", None, "uefa.europa", tier=0, cup=True),
     ]
 }
