@@ -78,7 +78,7 @@ Never commit `.env` or any key. See [docs/operations.md](docs/operations.md) for
 
 ## Access
 
-The site sits behind Cloudflare Access: visitors sign in with Google. A public welcome page (`/welcome`) and the legal pages are open to everyone. The `/admin` page (usage, people, feedback) is limited to the operator.
+The site's front door is a public landing page at `/` (with the method, terms, privacy and responsible-gambling pages). The app itself lives under `/app` (fixtures, `/app/match/…`, `/app/results`, `/app/record`) together with `/data` and `/api`, and sits behind Cloudflare Access: visitors continue with Google and land on the fixtures. `/admin` (usage, people, feedback) is limited to the operator. Public pages load no prediction data, so none appears in their HTML.
 
 ## Documents
 

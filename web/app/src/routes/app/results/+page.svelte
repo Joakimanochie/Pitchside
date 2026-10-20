@@ -62,7 +62,7 @@
 			<ol class="match-list">
 				{#each list as r (r.id)}
 					<li>
-						<a class="match-card result-card" href="/results/{r.id}">
+						<a class="match-card result-card" href="/app/results/{r.id}">
 							<div class="kick"><span class="kick-time">{r.ft[0]}–{r.ft[1]}</span><span class="kick-league">{index.leagues[r.league]}</span></div>
 							<div class="teams"><span>{r.home}</span><span><span class="vs">v </span>{r.away}</span></div>
 							<div class="probs">

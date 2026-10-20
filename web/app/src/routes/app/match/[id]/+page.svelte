@@ -22,7 +22,7 @@
 <svelte:head><title>{match.home} v {match.away} · Pitchside</title></svelte:head>
 
 <div class="wrap wide">
-	<a class="back" href="/"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3 5 8l5 5" /></svg>Fixtures</a>
+	<a class="back" href="/app"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3 5 8l5 5" /></svg>Fixtures</a>
 	<header class="match-head">
 		<h1 class="display">{match.home} v {match.away}</h1>
 		<p class="meta"><span>{index.leagues[match.league]}</span><span>{kickoffLong(match.kickoff)}</span><span>Time zone: {tzLabel()}</span><a href="#deep-dive">Scores, recent results and head to head ↓</a></p>

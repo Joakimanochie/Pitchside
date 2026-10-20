@@ -8,7 +8,7 @@
 </script>
 
 <li>
-	<a class="match-card" href="/match/{fixture.id}">
+	<a class="match-card" href="/app/match/{fixture.id}">
 		<div class="kick"><span class="kick-time">{timeLabel(fixture.kickoff)}</span><span class="kick-league">{leagueName}</span></div>
 		<div class="teams"><span>{fixture.home}</span><span><span class="vs">v </span>{fixture.away}</span></div>
 		<div class="probs">

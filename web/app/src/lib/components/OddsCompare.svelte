@@ -67,7 +67,7 @@
 				{:else}
 					The bookmakers’ prices have predicted results better than our probabilities, so a large gap is more often our error than theirs.
 				{/if}
-				This is information, not advice. <a href="/record#bookmakers">See the full test</a>.
+				This is information, not advice. <a href="/app/record#bookmakers">See the full test</a>.
 			</p>
 		</div>
 	{:else}

@@ -10,7 +10,7 @@
 			Each number is the model’s estimate of how likely something is: “Over 2.5 goals 54%” means that in matches like this one it would happen about 54 times in 100. The small odds beside it (“fair odds”) are simply 1 divided by
 			the probability. They are not bookmaker prices, and a bookmaker’s price always includes a margin.
 		</p>
-		<p><strong>Every prediction is stored before kickoff and never edited.</strong> After the match it is scored against what happened. The <a href="/results">Results</a> page shows each prediction’s outcome, and the <a href="/record">Track record</a> page scores them properly.</p>
+		<p><strong>Every prediction is stored before kickoff and never edited.</strong> After the match it is scored against what happened. The <a href="/app/results" data-sveltekit-reload>Results</a> page shows each prediction’s outcome, and the <a href="/app/record" data-sveltekit-reload>Track record</a> page scores them properly.</p>
 
 		<h2>Where the numbers come from</h2>
 		<ul>

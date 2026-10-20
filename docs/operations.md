@@ -69,11 +69,11 @@ Local preview: `npm run dev` in `web/app`.
 
 ## Sign-in with Google (Cloudflare Access)
 
-Visitors reach the site through Cloudflare Access. The public pages (`/welcome`, `/about`, `/terms`, `/privacy`, `/responsible-gambling`, the static files under `/_app`) are a bypass application named "Pitchside public pages"; everything else, including `/data/*`, `/api/*` and `/admin`, needs a sign-in. `/admin` has its own application that only the operator can pass.
+The site is split by path. Everything under `/app`, plus `/data` and `/api`, is the Cloudflare Access application "Pitchside": a visitor has to sign in. `/admin` is its own application that only the operator can pass. Every other path (the landing page at `/`, `/about`, `/terms`, `/privacy`, `/responsible-gambling`, the static files under `/_app`, `/robots.txt`) is public by default, which is why public pages must never load prediction data (they live in `web/app/src/routes/(site)` and have no data load). A new page that needs a sign-in must go under `/app`.
 
 To offer Google as the only way in:
 
 1. Google Cloud Console, **APIs & Services**, **OAuth consent screen**: user type External, app name Pitchside, scopes `openid`, `email`, `profile`, and set the publishing status to **In production** (while it is in "Testing" only listed test users can sign in).
 2. **Credentials**, **Create credentials**, **OAuth client ID**, type **Web application**. Authorised redirect URI: `https://aged-snow-144d.cloudflareaccess.com/cdn-cgi/access/callback`. Keep the client ID and secret to yourself.
-3. Cloudflare Zero Trust, **Settings**, **Authentication**, **Login methods**, **Add new**, **Google**: paste the client ID and secret, save, and press **Test**.
-4. In the "Pitchside" application, allow only the Google login method and turn on automatic redirect to it. Keep the email-code method on the "Pitchside admin" application so the operator is never locked out.
+3. Cloudflare Zero Trust, **Integrations**, **Identity providers**, **Add new**, **Google**: paste the client ID and secret, save, and press **Test**.
+4. In the "Pitchside" application, allow only the Google login method and turn on instant authentication (automatic redirect). Keep the email-code method on the "Pitchside admin" application so the operator is never locked out.

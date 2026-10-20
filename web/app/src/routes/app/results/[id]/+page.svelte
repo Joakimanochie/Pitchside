@@ -26,7 +26,7 @@
 <svelte:head><title>{r.home} {r.ft[0]}–{r.ft[1]} {r.away} · Pitchside</title></svelte:head>
 
 <div class="wrap wide">
-	<a class="back" href="/results"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3 5 8l5 5" /></svg>Results</a>
+	<a class="back" href="/app/results"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3 5 8l5 5" /></svg>Results</a>
 	<header class="match-head">
 		<h1 class="display">{r.home} {r.ft[0]}–{r.ft[1]} {r.away}</h1>
 		<p class="meta"><span>{index.leagues[r.league]}</span><span>{longDate(r.date)}</span>{#if r.ht}<span>Half-time {r.ht[0]}–{r.ht[1]}</span>{/if}</p>
