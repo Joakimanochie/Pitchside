@@ -58,6 +58,7 @@
 		<p class="status-line"><b>{L.n}</b> matches played and scored so far. <b>{stored.toLocaleString()}</b> predictions are stored for {d.fixtures.length} upcoming matches.</p>
 	</div>
 
+	{#if L.n > 0}
 	<section use:reveal>
 		<h2 class="h2">The live record so far</h2>
 		<p class="muted">
@@ -138,6 +139,12 @@
 			<p class="muted" style="margin-top:1rem">{L.waiting_minutes.toLocaleString()} more predictions (first goal, goal times and similar) are waiting for verified goal minutes and are not counted yet.</p>
 		{/if}
 	</section>
+	{:else}
+		<section use:reveal>
+			<h2 class="h2">The live record so far</h2>
+			<p class="muted">No finished match has been scored yet.</p>
+		</section>
+	{/if}
 
 	{#if C}
 		<section use:reveal>

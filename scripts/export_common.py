@@ -172,10 +172,11 @@ def build_snapshot(conn: psycopg.Connection) -> dict:
         tier = (UNRATED if league_of[mid] not in RATED_LEAGUES else TIERS.index(tier_for(rules, market_id, MARKETS[market_id].family, float(prob)))) if market_id in MARKETS else 2
         preds[mid][market_id]["null" if line is None else str(float(line))].append([sel, round(float(prob), 4), 1 if pick else 0, tier])
 
-    # the live record belongs to the newest model version that already has scored matches
+    # the live match-result record belongs to the newest domestic goals version that already has scored matches (a newer player or card version must not take its place)
     scored = conn.execute(
         "SELECT s.model_version_id FROM v_settled s JOIN prediction_runs r ON r.model_version_id = s.model_version_id AND r.run_type = 'weekly' "
-        "WHERE s.run_type = 'weekly' GROUP BY 1 ORDER BY max(r.created_at) DESC LIMIT 1").fetchone()
+        "WHERE s.run_type = 'weekly' AND s.market_id = '1x2' AND s.outcome_value IS NOT NULL AND s.model_version_id LIKE 'goals-%' "
+        "GROUP BY 1 ORDER BY max(r.created_at) DESC LIMIT 1").fetchone()
     live = live_record(conn, scored[0] if scored else version)
     live["model_version"] = scored[0] if scored else version
     live["lines"] = live_lines(conn)
