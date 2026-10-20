@@ -7,7 +7,7 @@
 
 		<h2>What we collect today</h2>
 		<ul>
-			<li><strong>Your email address.</strong> The preview is protected by Cloudflare Access. To let you in, Cloudflare checks your email address against the invited list and emails you a one-time code. Cloudflare keeps access logs (email, time, IP address, location) under its own terms.</li>
+			<li><strong>Your Google sign-in.</strong> You sign in with Google. Cloudflare Access, which guards the site, receives your email address and name from Google (not your password, contacts or other data). We keep your email address with your activity, and Cloudflare keeps access logs (email, time, IP address, location) under its own terms.</li>
 			<li><strong>Which pages you open.</strong> We count page views ourselves so we can see how the site is used: the page, the time, the email you signed in with, your country (from your IP address, which is not stored), whether you are on a phone or a computer, and the site or link you came from. This is stored in our own database, not shared with an analytics company, and used only to improve the product.</li>
 			<li><strong>Feedback you send.</strong> If you use the feedback form, we store your answer, your comment, the page it was sent from and the email you signed in with, so we can follow up and improve the product.</li>
 			<li><strong>Technical request data.</strong> Like any website, our host (Cloudflare) processes your IP address and browser details to deliver pages and protect the service.</li>
@@ -23,7 +23,7 @@
 		</ul>
 
 		<h2>Your rights</h2>
-		<p>Depending on where you live you may have the right to see, correct or delete the personal data held about you, and to complain to a data-protection authority. Ask the person who invited you to the preview and your email will be removed from the access list.</p>
+		<p>Depending on where you live you may have the right to see, correct or delete the personal data held about you, and to complain to a data-protection authority. Write to the operator and your email will be removed from our records and your access ended.</p>
 
 		<h2>When this changes</h2>
 		<p>Accounts, subscriptions and payments will add new data (such as billing details handled by a payment provider). This notice will be updated before they are introduced.</p>

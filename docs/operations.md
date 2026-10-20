@@ -66,3 +66,14 @@ Each daily run, after the predictions are stored and settled, the pipeline:
 By hand, from the repo root: `uv run python scripts/export_app_data.py`, then in `web/app`: `npm run build` and `npx wrangler deploy` (the Cloudflare login for the Pitchside account
 is kept in a separate config folder: `XDG_CONFIG_HOME=C:/Users/HP/.pitchside-cf`). Stop the dev server first on Windows or the build cannot clean its output folder.
 Local preview: `npm run dev` in `web/app`.
+
+## Sign-in with Google (Cloudflare Access)
+
+Visitors reach the site through Cloudflare Access. The public pages (`/welcome`, `/about`, `/terms`, `/privacy`, `/responsible-gambling`, the static files under `/_app`) are a bypass application named "Pitchside public pages"; everything else, including `/data/*`, `/api/*` and `/admin`, needs a sign-in. `/admin` has its own application that only the operator can pass.
+
+To offer Google as the only way in:
+
+1. Google Cloud Console, **APIs & Services**, **OAuth consent screen**: user type External, app name Pitchside, scopes `openid`, `email`, `profile`, and set the publishing status to **In production** (while it is in "Testing" only listed test users can sign in).
+2. **Credentials**, **Create credentials**, **OAuth client ID**, type **Web application**. Authorised redirect URI: `https://aged-snow-144d.cloudflareaccess.com/cdn-cgi/access/callback`. Keep the client ID and secret to yourself.
+3. Cloudflare Zero Trust, **Settings**, **Authentication**, **Login methods**, **Add new**, **Google**: paste the client ID and secret, save, and press **Test**.
+4. In the "Pitchside" application, allow only the Google login method and turn on automatic redirect to it. Keep the email-code method on the "Pitchside admin" application so the operator is never locked out.

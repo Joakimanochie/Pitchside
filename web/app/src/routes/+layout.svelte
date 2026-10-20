@@ -20,7 +20,7 @@
 	let first = true;
 	afterNavigate(() => {
 		const path = location.pathname;
-		if (path.startsWith('/admin')) return;
+		if (path.startsWith('/admin') || path.startsWith('/welcome')) return;      // /welcome is seen before sign-in, so there is nobody to count
 		const q = new URLSearchParams(location.search);
 		const body = JSON.stringify({
 			path,
