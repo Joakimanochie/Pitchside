@@ -85,6 +85,7 @@ The site's front door is a public landing page at `/` (with the method, terms, p
 - [BUILD.md](BUILD.md): what is built, in what order, and the decisions behind it
 - [PRODUCT.md](PRODUCT.md) and [DESIGN.md](DESIGN.md): who it is for and how it looks
 - [docs/data-audit.md](docs/data-audit.md) and [docs/odds-sources.md](docs/odds-sources.md): data sources and their terms
+- [docs/audit-2026-10-25.md](docs/audit-2026-10-25.md): the latest audit of the model, the pipeline and the interface, with ranked findings
 
 ## Data sources
 
