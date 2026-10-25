@@ -103,6 +103,7 @@ def test_extra_time_goals_and_the_shootout_are_not_part_of_the_90_minute_score()
     goals = [("goal", "Arsenal", "30'", 1), ("goal", "Porto", "70'", 2), ("goal", "Arsenal", "105'", 3), ("penalty---scored", "Porto", "120'", 5)]
     r = parse_result(summary("2", "2", goals), beyond_90=True)
     assert r["ft"] == (1, 1) and r["ht"] == (1, 0)
+    assert r["stats"] == {}                       # ESPN's totals include extra time, so nothing is stored that could not be settled on 90 minutes
 
 
 def test_season_is_named_by_the_year_it_started():

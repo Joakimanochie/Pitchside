@@ -496,6 +496,8 @@ def run_leagues(conn: psycopg.Connection, league_ids: list[str], days: int = 8, 
     conn.commit()
     report: dict = {lid: {} for lid in league_ids}
     errors: dict = {}
+    if force:       # --force writes a second official run for a match: the database guards (migration 011) are lifted for this session only
+        conn.execute("SET pitchside.unsafe_writes = 'on'")
 
     def attempt(key: str, section: str, fn, *args):
         try:

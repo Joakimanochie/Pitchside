@@ -24,7 +24,7 @@ from pitchside.markets.registry import MARKETS
 from pitchside.odds.compare import demargin, edge, expected_value, overround
 
 OUT = base.ROOT / "web" / "app" / "static" / "data"
-RESULT_DAYS = 21   # finished matches stay on the results pages for three weeks
+RESULT_DAYS = 42   # finished matches stay on the results pages for six weeks
 FORM_MATCHES, H2H_MATCHES = 15, 5   # the last 15 results feed the recent-results lists and the 5/10/15 hit rates
 
 

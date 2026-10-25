@@ -1,0 +1,84 @@
+name: Pitchside results
+
+# Every half hour through the match hours: when ESPN says a scheduled match is over, store its score, settle the predictions the score decides,
+# and (only then) refresh and redeploy the site so the match moves from Fixtures to Results. Most runs find nothing and finish in about a minute.
+# Corners, cards, shots and player markets are settled by the daily job once the full statistics are published.
+on:
+  schedule:
+    - cron: "10,40 0-1,11-23 * * *"
+  workflow_dispatch:
+
+# Shares the daily pipeline's lock: never two jobs writing to the database at once.
+concurrency:
+  group: pitchside-pipeline
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  results:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install runtime dependencies only
+        run: uv sync --frozen --no-dev
+
+      - name: Store finished scores and settle
+        id: results
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -o pipefail
+          uv run --frozen --no-dev python -m pitchside.pipeline.results | tee report.txt
+          grep '^finished=' report.txt >> "$GITHUB_OUTPUT"
+
+      - name: Export the web app data
+        if: ${{ steps.results.outputs.finished != '0' }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: uv run --frozen --no-dev python scripts/export_app_data.py
+
+      - uses: actions/setup-node@v4
+        if: ${{ steps.results.outputs.finished != '0' && env.CLOUDFLARE_API_TOKEN != '' }}
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/app/package-lock.json
+
+      - name: Build and deploy the web app
+        if: ${{ steps.results.outputs.finished != '0' && env.CLOUDFLARE_API_TOKEN != '' }}
+        working-directory: web/app
+        env:
+          CLOUDFLARE_ACCOUNT_ID: 732527cd8d00cefae7077399663914e8
+        run: |
+          npm ci
+          npm run build
+          npx wrangler deploy
+
+  alert:
+    needs: results
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open or update the failure issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Results job failed"
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$title\" in:title" --json number --jq '.[0].number')
+          body="The results run failed: $RUN_URL"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body"
+          fi

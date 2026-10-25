@@ -36,7 +36,10 @@
 
 	onMount(() => {
 		clock.local = true;
+		clock.now = Date.now();
 		stale = Date.now() - new Date(data.index.generated_at).getTime() > 36 * 3600 * 1000;
+		const tick = setInterval(() => (clock.now = Date.now()), 60_000);
+		return () => clearInterval(tick);
 	});
 </script>
 

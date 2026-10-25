@@ -46,20 +46,22 @@ jobs:
       # Refresh the private web app: export the latest stored predictions as data files, build the site from them, publish to Cloudflare.
       # The export always runs; the build and deploy are skipped (not failed) until the CLOUDFLARE_API_TOKEN secret exists.
       # The site sits behind Cloudflare Access. The web app holds no database credentials: it only ships these files.
+      # These steps run even when one league failed above (the job is still marked failed and the alert opens), so one bad league never freezes the whole site.
       - name: Export the web app data
+        if: ${{ !cancelled() }}
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: uv run --frozen --no-dev python scripts/export_app_data.py
 
       - uses: actions/setup-node@v4
-        if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
+        if: ${{ !cancelled() && env.CLOUDFLARE_API_TOKEN != '' }}
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: web/app/package-lock.json
 
       - name: Build the web app
-        if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
+        if: ${{ !cancelled() && env.CLOUDFLARE_API_TOKEN != '' }}
         working-directory: web/app
         run: |
           npm ci
@@ -68,7 +70,7 @@ jobs:
           npm run build
 
       - name: Deploy the web app to Cloudflare
-        if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
+        if: ${{ !cancelled() && env.CLOUDFLARE_API_TOKEN != '' }}
         working-directory: web/app
         env:
           CLOUDFLARE_ACCOUNT_ID: 732527cd8d00cefae7077399663914e8

@@ -22,6 +22,7 @@ def conn(pg_uri):
     with psycopg.connect(pg_uri, autocommit=True) as admin:
         admin.execute("DROP SCHEMA IF EXISTS public CASCADE")
         admin.execute("CREATE SCHEMA public")
-    with psycopg.connect(pg_uri) as c:
+    # The prediction guards (migration 011) are switched off for the fixtures, which insert predictions on matches of any date; test_prediction_guards turns them on.
+    with psycopg.connect(pg_uri, options="-c pitchside.unsafe_writes=on") as c:
         apply_migrations(c)
         yield c

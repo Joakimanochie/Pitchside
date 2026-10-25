@@ -14,13 +14,13 @@ Pitchside is a private preview, open by Google sign-in. It shows estimates, not 
 
 About 210 markets per match: result, double chance, handicaps, over/under, both teams to score, correct score, halves, game flow, goal minutes, combinations, corners, cards, shots and shots on target, card timing and player markets. Coverage and gaps are listed in [docs/market-coverage.md](docs/market-coverage.md).
 
-Each number carries a High, Medium or Low confidence rating, set from how the model did on past matches of that kind (the Championship and the cups are not rated yet). The Track record page scores every stored prediction after the match.
+Each number carries a High, Medium or Low confidence rating, set from how the model did on past matches of that kind (the Championship and the cups are not rated yet). The Track record page scores every stored prediction after the match. A match leaves Fixtures at kickoff and appears in Results (grouped by game week) once played: the result-based markets are scored within the hour, and corners, cards, shots and player markets the next morning when the full statistics are published.
 
 ## How it works
 
 ```
 football-data.co.uk, Understat, ESPN, openfootball
-        │  daily GitHub Actions job (07:00 UTC) + half-hourly lineups job
+        │  daily GitHub Actions job (07:00 UTC), half-hourly results job (scores a match the day it is played) and lineups job
         ▼
    Supabase Postgres  ── append-only predictions, settlements, track-record views
         │  scripts/export_app_data.py (SELECTs only)
@@ -36,14 +36,14 @@ football-data.co.uk, Understat, ESPN, openfootball
 
 | Path | What is there |
 |---|---|
-| `src/pitchside/` | the Python package: `ingest/` (data sources), `models/`, `markets/` (pricing and settlement rules), `sim/`, `settle/`, `pipeline/` (daily and lineups jobs), `odds/`, `db/` |
+| `src/pitchside/` | the Python package: `ingest/` (data sources), `models/`, `markets/` (pricing and settlement rules), `sim/`, `settle/`, `pipeline/` (daily, results and lineups jobs), `odds/`, `db/` |
 | `db/migrations/` | numbered SQL migrations (`python -m pitchside.db.migrate`) |
 | `scripts/` | backtests, tuning, data loaders and the web data export |
 | `tests/` | pytest suite (embedded Postgres, no network) |
 | `web/app/` | the SvelteKit site (Svelte 5, Cloudflare adapter) |
 | `data/` | club-name aliases and the committed confidence rules |
 | `docs/` | model card, goals-model report, market coverage and catalogue, data sources, operations |
-| `.github/workflows/` | `pipeline.yml` (daily) and `lineups.yml` (every 30 minutes) |
+| `.github/workflows/` | `pipeline.yml` (daily), `results.yml` (every 30 minutes in match hours) and `lineups.yml` (every 30 minutes) |
 
 ## Run it locally
 

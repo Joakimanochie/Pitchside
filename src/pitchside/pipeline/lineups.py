@@ -1,10 +1,11 @@
-"""Hourly job: when a club names its team, store the lineup and re-price the player markets for that match with it.
+"""Half-hourly job: when a club names its team, store the lineup.
 
     uv run python -m pitchside.pipeline.lineups
 
-Lineups appear about an hour before kickoff, so the job looks at matches starting within the next few hours. The lineup-aware player prices are
-their own model version (players-0.4.0); the weekly players-0.3.0 prediction stays untouched, and the site shows the newer one when it exists.
-Prints `new_lineups=N` for the workflow, which only exports and deploys when something changed.
+Lineups appear about an hour before kickoff, so the job looks at matches starting within the next few hours. Lineup-aware player prices
+(players-0.4.0, see predict_lineup_players) are PAUSED: on the live record they were miscalibrated (audit of 2026-10-25), so the weekly players-0.3.0
+prediction is the one the site shows and no new 0.4.0 runs are made. Lineups are still stored so the model can be rebuilt and backtested on them.
+Set PRICE_WITH_LINEUPS to switch pricing back on once it passes a backtest. Prints `new_lineups=N` for the workflow, which only exports and deploys when something changed.
 """
 import argparse
 import json
@@ -31,6 +32,7 @@ from pitchside.pipeline.weekly import (
     match_player_rows,
 )
 
+PRICE_WITH_LINEUPS = False   # paused: the lineup-aware player model was miscalibrated live; lineups are stored, not priced
 LINEUP_PLAYER_VERSION = "players-0.4.0"   # players-0.3.0 plus the announced lineup (starters 1, substitutes 0.3, others out); 0.2.0 was the same for the shot-based markets only
 
 
@@ -96,6 +98,6 @@ if __name__ == "__main__":
     with psycopg.connect(os.environ["DATABASE_URL"]) as c:
         apply_migrations(c)
         ids = ingest_lineups(c, args.hours)
-        result = predict_lineup_players(c, ids) if ids else {}
+        result = predict_lineup_players(c, ids) if ids and PRICE_WITH_LINEUPS else {}
     print(json.dumps({"lineups": ids, "players": result}, default=str))
     print(f"new_lineups={len(ids)}")

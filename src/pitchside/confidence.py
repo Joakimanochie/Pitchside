@@ -32,6 +32,8 @@ UNRATED = 3        # tier shown for leagues the ratings were not built from
 # The ratings and the half-time/goal-timing inputs come from tests on these five leagues. Other leagues (the Championship) get predictions
 # from the same models, but no confidence rating until their own backtest exists.
 RATED_LEAGUES = ("EPL", "LALIGA", "BUNDESLIGA", "SERIEA", "LIGUE1")
+# Player markets (family I) are never rated High: their ratings come from one short backtest and the live record of the lineup-aware version missed (audit 2026-10-25).
+CAPPED_AT_MEDIUM = ("I",)
 
 
 def band_of(p: float) -> int:
@@ -110,7 +112,8 @@ def tier_for(rules: dict, market_id: str, family: str, p: float) -> str:
     cell = rules["markets"].get(f"{market_id}|{band}")
     if cell is None or cell["n"] < rules["thresholds"]["min_cell"]:
         cell = rules["families"].get(f"{family}|{band}")
-    return cell["tier"] if cell is not None else "Low"
+    tier = cell["tier"] if cell is not None else "Low"
+    return "Medium" if tier == "High" and family in CAPPED_AT_MEDIUM else tier
 
 
 def load_rules(path: Path = RULES_PATH) -> dict:

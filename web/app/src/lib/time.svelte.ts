@@ -2,7 +2,7 @@
  * Kickoff times. Pages are built ahead of time, so before the browser takes over everything is shown in UTC;
  * once mounted the same values switch to the visitor's own time zone (and every label updates).
  */
-export const clock = $state({ local: false });
+export const clock = $state({ local: false, now: 0 });      // now: 0 until the browser takes over, then the current time in ms, refreshed every minute
 
 const zone = () => (clock.local ? undefined : 'UTC');
 

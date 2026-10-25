@@ -78,9 +78,9 @@ def build_outcomes(conn: psycopg.Connection) -> int:
             "WHERE c.match_id = ANY(%s) ORDER BY c.id", (logged,)):
         cards[match_id].append(["home" if team_id == home_team_id else "away", period, minute])
     log_players: dict[int, dict] = {mid: {} for mid in logged}
-    for match_id, name, yellow, red, fouls, fouled in conn.execute(
-            "SELECT match_id, player_name, yellow, red, fouls_committed, fouls_suffered FROM player_match_log WHERE match_id = ANY(%s)", (logged,)):
-        log_players[match_id][name] = {"cards": yellow + red, "fouls": fouls, "fouled": fouled}
+    for match_id, name, yellow, red, fouls, fouled, played in conn.execute(
+            "SELECT match_id, player_name, yellow, red, fouls_committed, fouls_suffered, played FROM player_match_log WHERE match_id = ANY(%s)", (logged,)):
+        log_players[match_id][name] = {"cards": yellow + red, "fouls": fouls, "fouled": fouled, "played": played}
     params = []
     for match_id, fh, fa, hh, ha, flag in matches:
         home, away = stats.get((match_id, True)), stats.get((match_id, False))
@@ -126,6 +126,9 @@ def _decide(row, records: dict) -> tuple[str, float | None, dict]:
         elif isinstance(market, PlayerMarket) and market.player_stat in LOG_STATS:   # a player's cards or fouls, from the ESPN match log
             if record.get("log_players") is None:
                 return "not_scorable", None, {"reason": "card_log_missing", **observed}
+            who = record["log_players"].get(selection)
+            if who is None or not who.get("played", True):    # bookmakers void a player bet when the player does not take part
+                return "void", None, {"reason": "player_did_not_play", **observed}
             res = settle_player(market, None if line is None else float(line), selection, record["log_players"])
         elif isinstance(market, PlayerMarket):   # one player's own count, from the shot events
             if record.get("players") is None:
@@ -151,7 +154,7 @@ def _decide(row, records: dict) -> tuple[str, float | None, dict]:
     return res["result"], res["outcome_value"], observed
 
 
-def settle_predictions(conn: psycopg.Connection) -> Counter:
+def settle_predictions(conn: psycopg.Connection, redo_markets: list[str] | None = None) -> Counter:
     """Settle every unsettled prediction on a finished or cancelled match; re-settle changed results and
     predictions that were waiting for goal minutes which have since been verified."""
     rows = conn.execute(
@@ -160,14 +163,14 @@ def settle_predictions(conn: psycopg.Connection) -> Counter:
         "FROM predictions p JOIN prediction_runs r ON r.id = p.run_id JOIN matches m ON m.id = p.match_id "
         "LEFT JOIN match_outcomes mo ON mo.match_id = m.id LEFT JOIN settlements s ON s.prediction_id = p.id "
         "WHERE (m.status = 'cancelled' AND s.prediction_id IS NULL) "
-        "   OR (m.status = 'finished' AND mo.match_id IS NOT NULL AND (s.prediction_id IS NULL "
+        "   OR (m.status = 'finished' AND mo.match_id IS NOT NULL AND (s.prediction_id IS NULL OR p.market_id = ANY(%s) "
         "       OR (s.observed ->> 'ft_home') IS DISTINCT FROM (mo.record ->> 'ft_home') "
         "       OR (s.observed ->> 'ft_away') IS DISTINCT FROM (mo.record ->> 'ft_away') "
         "       OR ((s.observed ->> 'reason') = 'goal_minutes_unverified' AND (mo.coverage ->> 'goal_minutes') = 'true') "
         "       OR ((s.observed ->> 'reason') = 'player_data_missing' AND (mo.coverage ->> 'player_data') = 'true') "
         "       OR ((s.observed ->> 'reason') = 'card_log_missing' AND (mo.coverage ->> 'card_log') = 'true') "
         "       OR ((s.observed ->> 'reason') = 'team_stats_missing' AND (mo.coverage ->> 'team_stats') = 'true'))) "
-        "ORDER BY p.id").fetchall()
+        "ORDER BY p.id", (redo_markets or [],)).fetchall()
     counts: Counter = Counter()
     records: dict = {}
     params = []
@@ -189,14 +192,18 @@ def settle_predictions(conn: psycopg.Connection) -> Counter:
     return counts
 
 
-def settle_all(conn: psycopg.Connection) -> dict:
+def settle_all(conn: psycopg.Connection, redo_markets: list[str] | None = None) -> dict:
     built = build_outcomes(conn)
-    counts = settle_predictions(conn)
+    counts = settle_predictions(conn, redo_markets)
     conn.commit()
     return {"outcomes_built": built, "settled": sum(counts.values()), "by_result": dict(counts)}
 
 
 if __name__ == "__main__":
+    import sys
+
     _load_env()
+    # --redo-player-logs: settle again every player cards/fouls prediction with the current rules (done once when a player who did not play started to void the bet)
+    redo = [mid for mid, mk in MARKETS.items() if isinstance(mk, PlayerMarket) and mk.player_stat in LOG_STATS] if "--redo-player-logs" in sys.argv else None
     with psycopg.connect(os.environ["DATABASE_URL"]) as c:
-        print(settle_all(c))
+        print(settle_all(c, redo))

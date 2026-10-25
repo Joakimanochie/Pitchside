@@ -46,7 +46,7 @@ def parse_result(payload: dict, beyond_90: bool) -> dict | None:
         except (TypeError, ValueError):
             return None
     stats = {}
-    for t in payload.get("boxscore", {}).get("teams", []):
+    for t in ([] if beyond_90 else payload.get("boxscore", {}).get("teams", [])):      # ESPN's totals include extra time: a match that went beyond 90 minutes gets no corners, cards or shots
         side = "home" if t["team"]["displayName"] == names["home"] else "away"
         box = {x["name"]: x.get("displayValue") for x in t.get("statistics", [])}
         stats[side] = {col: _stat(box, name) for col, name in STAT_COLUMNS.items()}

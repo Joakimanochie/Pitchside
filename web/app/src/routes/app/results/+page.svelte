@@ -10,10 +10,33 @@
 	const index = $derived(data.index);
 
 	const shown = $derived(index.results.filter((r) => ui.league === 'ALL' || r.league === ui.league));
-	const days = $derived.by(() => {
+	// A game week runs Monday to Sunday; the newest is open, the rest fold away so the page stays short.
+	function weekStart(day: string): string {
+		const d = new Date(`${day}T00:00:00Z`);
+		d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+		return d.toISOString().slice(0, 10);
+	}
+	function weekEnd(start: string): string {
+		const d = new Date(`${start}T00:00:00Z`);
+		d.setUTCDate(d.getUTCDate() + 6);
+		return d.toISOString().slice(0, 10);
+	}
+	function weekLabel(start: string): string {
+		return `${shortDate(start)} – ${shortDate(weekEnd(start))} ${weekEnd(start).slice(0, 4)}`;
+	}
+	const weeks = $derived.by(() => {
 		const groups = new Map<string, ResultEntry[]>();
-		for (const r of shown) groups.set(r.date, [...(groups.get(r.date) ?? []), r]);
-		return [...groups.entries()].sort(([a], [b]) => b.localeCompare(a));
+		for (const r of shown) {
+			const k = weekStart(r.date);
+			groups.set(k, [...(groups.get(k) ?? []), r]);
+		}
+		return [...groups.entries()]
+			.sort(([a], [b]) => b.localeCompare(a))
+			.map(([start, list]) => ({
+				start,
+				list: [...list].sort((a, b) => b.date.localeCompare(a.date)),
+				hit: list.filter((r) => (['home', 'draw', 'away'] as const).reduce((a, b) => ((r.p[b] ?? 0) > (r.p[a] ?? 0) ? b : a)) === r.actual).length
+			}));
 	});
 	const counts = $derived(Object.fromEntries(Object.keys(index.leagues).map((id) => [id, index.results.filter((r) => r.league === id).length])));
 	const totals = $derived.by(() => {
@@ -37,7 +60,7 @@
 <div class="wrap">
 	<div class="intro">
 		<h1 class="display">How the predictions turned out</h1>
-		<p class="lede">Every match from the last three weeks, with every prediction we stored before kickoff and whether it won or lost. Open a match to see all of its markets.</p>
+		<p class="lede">Every finished match from the last six weeks, grouped by game week (the newest is open), with every prediction we stored before kickoff and whether it won or lost. Open a match to see all of its markets.</p>
 		<div class="pills" role="group" aria-label="League">
 			<button class="pill" aria-pressed={ui.league === 'ALL'} onclick={() => (ui.league = 'ALL')}>All leagues <span class="count">{index.results.length}</span></button>
 			{#each Object.entries(index.leagues) as [id, name] (id)}
@@ -56,11 +79,14 @@
 		{/if}
 	</div>
 
-	{#each days as [day, list], gi (day)}
-		<section use:reveal style="--i:{Math.min(gi, 3)}">
-			<h2 class="day">{shortDate(day)} {day.slice(0, 4)}</h2>
+	{#each weeks as w, gi (w.start)}
+		<details class="week" open={gi === 0} use:reveal style="--i:{Math.min(gi, 3)}">
+			<summary>
+				<span class="week-name">{weekLabel(w.start)}</span>
+				<span class="week-meta">{w.list.length} {w.list.length === 1 ? 'match' : 'matches'} · result pick right {w.hit} of {w.list.length}</span>
+			</summary>
 			<ol class="match-list">
-				{#each list as r (r.id)}
+				{#each w.list as r (r.id)}
 					<li>
 						<a class="match-card result-card" href="/app/results/{r.id}">
 							<div class="kick"><span class="kick-time">{r.ft[0]}–{r.ft[1]}</span><span class="kick-league">{index.leagues[r.league]}</span></div>
@@ -77,7 +103,7 @@
 					</li>
 				{/each}
 			</ol>
-		</section>
+		</details>
 	{/each}
 	{#if !shown.length}
 		<p class="empty">No finished matches with stored predictions yet. They appear here once matches are played and scored.</p>
@@ -89,4 +115,12 @@
 	.pnums span.was b { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: .2em; }
 	.pnums span.was small { color: var(--ink); font-weight: 600; }
 	.picks-line { margin: 0; }
+	.week { margin-block: 1.25rem; border-top: 1px solid var(--line-strong); }
+	.week summary { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .25rem 1rem; padding: .9rem 0; min-height: 44px; cursor: pointer; list-style: none; }
+	.week summary::-webkit-details-marker { display: none; }
+	.week summary::before { content: '▸'; display: inline-block; width: 1.1em; transition: transform .15s; }
+	.week[open] summary::before { transform: rotate(90deg); }
+	.week-name { font-weight: 600; flex: 1 1 auto; }
+	.week-meta { color: var(--ink-2); font-size: .875rem; }
+	@media (prefers-reduced-motion: reduce) { .week summary::before { transition: none; } }
 </style>

@@ -13,6 +13,21 @@
 
 Each step is safe to re-run. Results are always ingested and settled even if there is nothing new to predict.
 
+If one league fails, the others still run, and the site data is still exported, built and deployed; the job is then marked failed and the "Daily pipeline failed" issue opens.
+
+## The results job (same-day scoring)
+
+`.github/workflows/results.yml` runs at :10 and :40 past the hour from 11:00 to 01:59 UTC. `python -m pitchside.pipeline.results` asks ESPN about every scheduled match that kicked off more than
+110 minutes ago; when ESPN says it is over, it stores the full-time and half-time score (only if the dated goals add up to ESPN's final score), settles the predictions the score decides
+(result, totals, both teams to score, correct score, halves, handicaps), and, only if something finished, exports and deploys the site so the match moves from Fixtures to Results.
+Corners, cards, shots and player markets are scored by the daily job once football-data and Understat publish the full statistics. football-data's score replaces the ESPN one when it arrives,
+and the predictions are settled again if the two differ. A failed run opens a "Results job failed" issue. Run it by hand from the Actions tab (**Pitchside results** > Run workflow) after a late finish.
+
+## Database guards
+
+Migration 011 makes the database refuse an official (weekly) prediction inserted after kickoff, or a second official run of the same model version for the same match and market.
+Backtest runs are exempt, and `--force` on the weekly job lifts the guards for that session only.
+
 ## One-time setup (only you can do this)
 
 The job needs the Supabase connection string as a repository secret:

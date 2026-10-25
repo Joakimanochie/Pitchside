@@ -35,7 +35,8 @@ def test_migrations_apply_once(conn):
     names = [r[0] for r in conn.execute("SELECT name FROM schema_migrations ORDER BY name")]
     assert names == ["001_warehouse.sql", "002_predictions.sql", "003_settlements.sql", "004_security_hardening.sql",
                      "005_track_record_views.sql",
-                     "006_prediction_context.sql", "007_odds.sql", "008_shot_events.sql", "009_lineups.sql", "010_espn_match_log.sql"]
+                     "006_prediction_context.sql", "007_odds.sql", "008_shot_events.sql", "009_lineups.sql", "010_espn_match_log.sql",
+                     "011_prediction_guards.sql"]
 
 
 def test_predictions_are_append_only(conn):
@@ -137,3 +138,39 @@ def test_every_public_table_has_row_level_security(conn):
 def test_settled_view_respects_caller_rights(conn):
     opts = conn.execute("SELECT reloptions FROM pg_class WHERE relname = 'v_settled'").fetchone()[0]
     assert "security_invoker=true" in opts
+
+
+def _future_match(conn, hours):
+    conn.execute(
+        "UPDATE matches SET status = 'scheduled', ft_home = NULL, ft_away = NULL, kickoff = now() + make_interval(hours => %s) WHERE id = (SELECT id FROM matches LIMIT 1)", (hours,))
+
+
+def _guarded(conn):
+    conn.execute("SET LOCAL pitchside.unsafe_writes = 'off'")
+
+
+def test_official_prediction_after_kickoff_is_refused(conn):
+    run_id = seed(conn)
+    _future_match(conn, -2)
+    _guarded(conn)
+    with pytest.raises(psycopg.errors.RaiseException, match="before kickoff"):
+        add_prediction(conn, run_id)
+
+
+def test_official_prediction_before_kickoff_is_accepted_once_per_version(conn):
+    run_id = seed(conn)
+    _future_match(conn, 5)
+    _guarded(conn)
+    add_prediction(conn, run_id, "home")
+    add_prediction(conn, run_id, "draw", 0.25)            # the same run may write more selections
+    second = conn.execute("INSERT INTO prediction_runs (run_type, model_version_id, feature_version, data_cutoff) VALUES ('weekly', 'test-0', 'f0', now()) RETURNING id").fetchone()[0]
+    with pytest.raises(psycopg.errors.RaiseException, match="already has an official"):
+        add_prediction(conn, second, "home")
+
+
+def test_backtest_runs_are_not_guarded(conn):
+    seed(conn)
+    _future_match(conn, -2)
+    _guarded(conn)
+    run_id = conn.execute("INSERT INTO prediction_runs (run_type, model_version_id, feature_version, data_cutoff) VALUES ('backtest', 'test-0', 'f0', now()) RETURNING id").fetchone()[0]
+    add_prediction(conn, run_id)

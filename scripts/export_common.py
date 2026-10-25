@@ -19,6 +19,7 @@ from pitchside.markets.registry import MARKETS
 ROOT = Path(__file__).resolve().parents[1]
 PROCESSED = ROOT / "data" / "processed"
 CACHE = ROOT / "web" / "validation.json"
+PAUSED_PLAYER_VERSIONS = ("players-0.4.0",)    # the lineup-aware player model: miscalibrated on the live record, no longer shown (audit 2026-10-25)
 
 
 def validation() -> dict:
@@ -147,8 +148,8 @@ def build_snapshot(conn: psycopg.Connection) -> dict:
     goal_versions = [version] + ([cup[0]] if cup else [])      # the domestic leagues and the cups are one family on the page
     # the count models (corners, cards, shots) are their own model line; predictions from the newest of each line are shown together
     counts = conn.execute("SELECT model_version_id FROM prediction_runs WHERE run_type = 'weekly' AND model_version_id LIKE 'counts-%' ORDER BY created_at DESC LIMIT 1").fetchone()
-    # player markets: every match shows its newest player prediction (the weekly one, or the lineup-aware one made once the lineup was named)
-    player_versions = [r[0] for r in conn.execute("SELECT DISTINCT model_version_id FROM prediction_runs WHERE run_type = 'weekly' AND model_version_id LIKE 'players-%'")]
+    # player markets: every match shows its newest player prediction, except versions paused after the audit (players-0.4.0, the lineup-aware one, was miscalibrated live)
+    player_versions = [r[0] for r in conn.execute("SELECT DISTINCT model_version_id FROM prediction_runs WHERE run_type = 'weekly' AND model_version_id LIKE 'players-%%' AND NOT model_version_id = ANY(%s)", (list(PAUSED_PLAYER_VERSIONS),))]
     timing = conn.execute("SELECT model_version_id FROM prediction_runs WHERE run_type = 'weekly' AND model_version_id LIKE 'cardtime-%' ORDER BY created_at DESC LIMIT 1").fetchone()
     versions = goal_versions + ([counts[0]] if counts else []) + ([timing[0]] if timing else []) + player_versions
     matches = conn.execute(
@@ -166,7 +167,7 @@ def build_snapshot(conn: psycopg.Connection) -> dict:
             "SELECT p.match_id, p.market_id, p.line, p.selection, p.probability, p.is_pick FROM predictions p "
             "JOIN prediction_runs r ON r.id = p.run_id WHERE r.model_version_id = ANY(%s) AND r.run_type = 'weekly' "
             "AND p.match_id = ANY(%s) AND (r.model_version_id NOT LIKE 'players-%%' OR r.id = (SELECT r2.id FROM prediction_runs r2 JOIN predictions p2 ON p2.run_id = r2.id "
-            "WHERE p2.match_id = p.match_id AND r2.model_version_id LIKE 'players-%%' AND r2.run_type = 'weekly' ORDER BY r2.created_at DESC LIMIT 1)) ORDER BY p.id", (versions, ids)):
+            "WHERE p2.match_id = p.match_id AND r2.model_version_id LIKE 'players-%%' AND NOT r2.model_version_id = ANY(%s) AND r2.run_type = 'weekly' ORDER BY r2.created_at DESC LIMIT 1)) ORDER BY p.id", (versions, ids, list(PAUSED_PLAYER_VERSIONS))):
         if market_id in MARKETS and MARKETS[market_id].family == 'I' and MARKETS[market_id].player_stat not in LOG_STATS and league_of[mid] not in RATED_LEAGUES:
             continue            # no shot-based player markets for leagues without shot data (cards and fouls come from the ESPN log and exist everywhere)
         tier = (UNRATED if league_of[mid] not in RATED_LEAGUES else TIERS.index(tier_for(rules, market_id, MARKETS[market_id].family, float(prob)))) if market_id in MARKETS else 2
