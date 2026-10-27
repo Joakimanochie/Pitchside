@@ -67,7 +67,7 @@ def rows(data):
 
 def quota(key: str, label: str) -> None:
     acct = call("/account", key)
-    print(f"Quota {label}:", acct if failed(acct) else {k: acct.get(k) for k in ("request_limit", "request_count")})
+    print(f"Quota {label} (raw reply):", str(acct)[:300])
 
 
 def main() -> int:
@@ -109,21 +109,21 @@ def main() -> int:
     else:
         for m in rows(markets):
             meta[int(m["marketId"])] = m
-        names = sorted({m.get("marketName", "?") for m in meta.values()})
-        print(f"\n{len(meta)} markets in the catalogue ({len(names)} names). Names mentioning double / team / goals / score:")
-        for n in names:
-            if any(t in n.lower() for t in ("double", "team", "score", "goals")):
+        football = sorted({m.get("marketName", "?") for m in meta.values() if m.get("sportId") == FOOTBALL})
+        print(f"\n{len(meta)} markets in the catalogue over all sports; {len(football)} football names. Those about double chance, team goals, both teams to score or over/under:")
+        for n in football:
+            if any(t in n.lower() for t in ("double chance", "team 1 total", "team 2 total", "both teams to score", "over under")) and len(n) < 45:
                 print("  ", n)
 
     today = datetime.now(UTC).date()
     fixture = None
     league = None
-    tried = 0
-    for lg, tid in found.items():
-        if tried == 2:
-            break
-        tried += 1
-        fx = call("/fixtures", key, tournamentId=tid, **{"from": today.isoformat(), "to": (today + timedelta(days=4)).isoformat()}, statusId=0, hasOdds="true", bookmakers="sportybet")
+    upcoming = {t["tournamentId"]: t.get("upcomingFixtures") or 0 for t in rows(tours)}
+    cand = [(lg, tid) for lg, tid in found.items()] + [(f"cup {name}", tid) for tid, name in cups]
+    cand = sorted((c for c in cand if upcoming.get(c[1])), key=lambda c: -upcoming[c[1]])[:3]
+    print("\nTournaments with upcoming fixtures, most first:", [(lg, upcoming[tid]) for lg, tid in cand] or "none")
+    for lg, tid in cand:
+        fx = call("/fixtures", key, tournamentId=tid, **{"from": today.isoformat(), "to": (today + timedelta(days=7)).isoformat()}, statusId=0, hasOdds="true", bookmakers="sportybet")
         if failed(fx):
             print(f"\nFixtures call failed for {lg}:", fx)
             continue
@@ -142,6 +142,9 @@ def main() -> int:
         quota(key, "after")
         return 1
     book_odds = data.get("bookmakerOdds") or {}
+    print("Odds reply keys:", sorted(data)[:30], "| bookmakers in reply:", sorted(book_odds))
+    sample = next(iter(((book_odds.get("sportybet") or {}).get("markets") or {}).items()), None)
+    print("Raw sample of one SportyBet market:", json.dumps(sample)[:500] if sample else "none")
     for site in sites:
         info = book_odds.get(site)
         if not info:
