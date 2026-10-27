@@ -1,0 +1,18 @@
+name: Odds API probe
+
+# Manual only. Checks what The Odds API covers using the ODDS_API_KEY secret; prints no secret. Safe to delete once a feed is chosen.
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Probe The Odds API
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: python scripts/probe_odds_api.py
