@@ -67,7 +67,9 @@ def rows(data):
 
 def quota(key: str, label: str) -> None:
     acct = call("/account", key)
-    print(f"Quota {label} (raw reply):", str(acct)[:300])
+    # The account record also holds the owner's email and subscription id and Actions logs are public, so show only fields about requests or limits.
+    shown = {k: v for k, v in acct.items() if isinstance(v, int | float) and any(t in k.lower() for t in ("request", "limit", "count", "quota"))} if isinstance(acct, dict) else {}
+    print(f"Quota {label}:", acct if failed(acct) else shown or "no request counter in the reply")
 
 
 def main() -> int:
@@ -123,7 +125,7 @@ def main() -> int:
     cand = sorted((c for c in cand if upcoming.get(c[1])), key=lambda c: -upcoming[c[1]])[:3]
     print("\nTournaments with upcoming fixtures, most first:", [(lg, upcoming[tid]) for lg, tid in cand] or "none")
     for lg, tid in cand:
-        fx = call("/fixtures", key, tournamentId=tid, **{"from": today.isoformat(), "to": (today + timedelta(days=7)).isoformat()}, statusId=0, hasOdds="true", bookmakers="sportybet")
+        fx = call("/fixtures", key, tournamentId=tid, **{"from": today.isoformat(), "to": (today + timedelta(days=7)).isoformat()})
         if failed(fx):
             print(f"\nFixtures call failed for {lg}:", fx)
             continue
@@ -134,7 +136,7 @@ def main() -> int:
         print("\nNo upcoming fixtures with SportyBet prices found in the next 4 days (first two leagues tried).")
         quota(key, "after")
         return 1
-    print(f"\nProbe match: {fixture.get('participant1Name')} v {fixture.get('participant2Name')} ({league}, fixtureId {fixture['fixtureId']})")
+    print(f"\nProbe match: {fixture.get('participant1Name')} v {fixture.get('participant2Name')} ({league}, fixtureId {fixture['fixtureId']}, start {fixture.get('startTime')}, status {fixture.get('statusName', fixture.get('statusId'))}, hasOdds {fixture.get('hasOdds')})")
 
     data = call("/odds", key, fixtureId=fixture["fixtureId"], bookmakers=",".join(sites), oddsFormat="decimal")
     if failed(data):
