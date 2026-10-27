@@ -34,5 +34,8 @@ Shots 1X2; Shots Over/Under; Shots on Target 1X2; Shots on Target Over/Under; Po
 ## I. Players
 1st Goalscorer; Last Goalscorer; Anytime Goalscorer; Player Not to Score; Player goals; Player assists; Player shots; Player shots on goal; Player tackles; Player Fouls Won; Player to be carded.
 
+## Lines per league (for the Odds tab, see `data/market_availability.json`)
+Only market names were recorded above, not which lines a market offers. To be filled per league (Premier League, La Liga, Bundesliga, Serie A, Ligue 1): the lines under Over/Under, each team's Over/Under, and whether Double Chance and GG/NG are listed. Date read: not yet.
+
 ## Other sites
 (To be added: site, URL, date read, markets not in the list above.)

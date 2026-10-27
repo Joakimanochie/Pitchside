@@ -28,6 +28,15 @@
 	const markWord: Record<number, string> = { 1: 'won', 0: 'lost', 2: 'stake returned', 3: 'not played yet' };
 	const statusWord = { pending: 'Not finished', won: 'Every bet won', lost: 'A bet lost' } as const;
 	const record = $derived(odds.record.filter((r) => r.slips > 0));
+
+	const LEAGUE_NAME: Record<string, string> = { EPL: 'Premier League', LALIGA: 'La Liga', BUNDESLIGA: 'Bundesliga', SERIEA: 'Serie A', LIGUE1: 'Ligue 1' };
+	const site = $derived(odds.availability?.site ?? 'the betting site');
+	// Leagues whose over/under lines have not yet been read off the site's own match page: their bets are limited to a list of markets we expect the site to have.
+	const unchecked = $derived(
+		Object.entries(odds.availability?.leagues ?? {})
+			.filter(([, v]) => !v.lines_confirmed)
+			.map(([id]) => LEAGUE_NAME[id] ?? id)
+	);
 </script>
 
 <svelte:head><title>Odds · Pitchside</title></svelte:head>
@@ -72,13 +81,16 @@
 					{#each legs as leg (leg.match)}
 						<li>
 							<span class="when">{timeLabel(leg.kickoff)}</span>
-							<span class="what"><b>{leg.bet}</b><small>{leg.home} v {leg.away}</small></span>
+							<span class="what"><b>{leg.bet}</b><small>{leg.home} v {leg.away}</small>{#if leg.market}<small>On {site}: {leg.market}</small>{/if}</span>
 							<span class="chance-leg">{pct0(leg.p)}<ConfBars tier={leg.tier} /></span>
 							<span class="out out-{leg.outcome}" role="img" aria-label={markWord[leg.outcome]}>{mark[leg.outcome]}</span>
 						</li>
 					{/each}
 				</ol>
 				<p class="muted small">Stored before the first kickoff and never changed. Place each bet separately on the site you use, and check the price and that the market is open for that match.</p>
+				{#if unchecked.length}
+					<p class="muted small">Bets are limited to markets {site} lists. The exact goal lines have not yet been checked on {site} for {unchecked.join(', ')}, so a line may be missing for a match: if it is, skip that bet.</p>
+				{/if}
 			</section>
 		{:else}
 			<p class="empty">No {pickedTarget}-odds slip for this day: there are not enough matches to reach it. Try a smaller target.</p>

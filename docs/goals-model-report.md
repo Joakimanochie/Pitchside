@@ -42,6 +42,7 @@ By season (1X2 log loss, model vs bookmaker): 2022/23 1.007 vs 0.962; 2023/24 0.
 - Whether the model's edge over the base rate survives different eras. The four test seasons are all post-2022.
 
 ## Next improvements, in order of likely value
+(Updated plan with evidence, sources and decisions: `docs/model-improvement-research.md`.)
 
 1. Use expected goals (Understat history) as an extra signal. Real goals are noisy; xG is a steadier measure of team strength.
 2. A prior for newly promoted teams instead of the league average.

@@ -1,0 +1,31 @@
+{
+  "site": "SportyBet",
+  "note": "Which markets and lines the Odds tab may pick from. Edit this file when a site's list is checked. null means the market has no line (1X2, double chance, GG/NG); a list is the lines the site offers. A league without its own 'markets' uses 'default'. 'confirmed_on' is the date the league's list was checked on a match page of the site; 'lines_confirmed' is false until the over/under lines themselves have been read off the page (only market names were read on 2026-10-06, see docs/market-catalogue.md).",
+  "site_names": {
+    "1x2": "1X2",
+    "double_chance": "Double Chance",
+    "ou_total": "Over/Under",
+    "ou_home": "{home} Over/Under",
+    "ou_away": "{away} Over/Under",
+    "btts": "GG/NG"
+  },
+  "default": {
+    "confirmed_on": null,
+    "lines_confirmed": false,
+    "markets": {
+      "1x2": null,
+      "double_chance": null,
+      "ou_total": [0.5, 1.5, 2.5, 3.5, 4.5],
+      "ou_home": [0.5, 1.5, 2.5],
+      "ou_away": [0.5, 1.5, 2.5],
+      "btts": null
+    }
+  },
+  "leagues": {
+    "EPL": {"confirmed_on": "2026-10-06", "lines_confirmed": false},
+    "LALIGA": {"confirmed_on": null, "lines_confirmed": false},
+    "BUNDESLIGA": {"confirmed_on": null, "lines_confirmed": false},
+    "SERIEA": {"confirmed_on": null, "lines_confirmed": false},
+    "LIGUE1": {"confirmed_on": null, "lines_confirmed": false}
+  }
+}

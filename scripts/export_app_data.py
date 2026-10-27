@@ -181,7 +181,7 @@ def export_odds(conn: psycopg.Connection, rules: dict, out_path: Path) -> dict:
         slip = slips.setdefault(acc, {"date": day.isoformat(), "target": float(target), "fair_odds": float(fair), "p": float(win_p), "legs": []})
         line = None if line is None else float(line)
         tier = UNRATED if league not in RATED_LEAGUES else TIERS.index(tier_for(rules, market, MARKETS[market].family, float(prob)))
-        slip["legs"].append({"match": mid, "league": league, "kickoff": kickoff.isoformat(), "home": home, "away": away, "bet": accas.label(market, line, sel, home, away),
+        slip["legs"].append({"match": mid, "league": league, "kickoff": kickoff.isoformat(), "home": home, "away": away, "bet": accas.label(market, line, sel, home, away), "market": accas.site_market(market, home, away),
                              "p": round(float(prob), 4), "tier": tier, "outcome": OUTCOME.get(result, 3)})
     for slip in slips.values():
         outcomes = [leg["outcome"] for leg in slip["legs"]]
@@ -193,7 +193,10 @@ def export_odds(conn: psycopg.Connection, rules: dict, out_path: Path) -> dict:
     for target in accas.TARGETS:
         done = [x for x in slips.values() if x["target"] == target and x["status"] != "pending"]
         record.append({"target": target, "slips": len(done), "won": sum(1 for x in done if x["status"] == "won"), "expected": round(sum(x["p"] for x in done), 2)})
-    out = {"generated_at": datetime.now(UTC).isoformat(timespec="seconds"), "rules": accas.RULES,
+    avail = accas.load_availability()
+    availability = {"site": avail["site"], "leagues": {lg: {"confirmed_on": avail["leagues"].get(lg, avail["default"])["confirmed_on"],
+                                                           "lines_confirmed": avail["leagues"].get(lg, avail["default"])["lines_confirmed"]} for lg in sorted(RATED_LEAGUES)}}
+    out = {"generated_at": datetime.now(UTC).isoformat(timespec="seconds"), "rules": accas.RULES, "availability": availability,
            "days": [{"date": d, "slips": sorted(v, key=lambda x: x["target"])} for d, v in sorted(days.items(), reverse=True)], "record": record}
     out_path.write_text(json.dumps(out, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
     return out

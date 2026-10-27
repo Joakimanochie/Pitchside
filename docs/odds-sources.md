@@ -11,7 +11,11 @@ next to a prediction and compared with it. They are never a model input.
 | A licensed odds API (for example The Odds API) | Live prices from many bookmakers, more markets | Needs a paid plan and a key | Check the plan's markets and redistribution terms before use | Not built. Plugs in as another `OddsProvider` |
 
 ## The Odds tab and market availability
-The Odds tab uses a fixed list of markets that every betting site lists (`WIDELY_OFFERED` in `src/pitchside/accas.py`). It does not check any one site for a given match, and its odds are the model's fair odds. Showing only markets a site really has open, with the site's own price, needs a licensed odds API (for example The Odds API, paid) behind the `OddsProvider` seam; scraping a betting site is not allowed without confirming its terms and is not built.
+The aim: every bet on the Odds tab is one a user can place on their betting site, in a market the site lists. Level 1 is a confirmed list per league in `data/market_availability.json`
+(read by `src/pitchside/accas.py`; `WIDELY_OFFERED` there is only the fallback if the file is missing). It names the site's markets and goal lines, and each leg shows the site's own market name ("Over/Under", "GG/NG", "Arsenal Over/Under").
+`confirmed_on` and `lines_confirmed` record how far each league's list has been checked on a match page of the site; until `lines_confirmed` is true the Odds page tells users that a line may be missing.
+To confirm a league: open one upcoming match of that league on the site, copy the lines under Over/Under, each team's Over/Under, Double Chance and GG/NG, edit the league's entry (a `markets` block like `default`'s), set `lines_confirmed` to true and `confirmed_on` to the date. Slips already stored are not changed; new slips use the new list.
+Level 2, a check of every match against the site's own list, needs a licensed odds feed and is not built. The slips' odds are the model's fair odds. Showing only markets a site really has open, with the site's own price, needs a licensed odds API (for example The Odds API, paid) behind the `OddsProvider` seam; scraping a betting site is not allowed without confirming its terms and is not built.
 
 ## How the data is kept
 - `odds_snapshots` stores each price with the time it was fetched, append-only; only changed prices are written. `v_latest_odds` gives the newest price per selection.

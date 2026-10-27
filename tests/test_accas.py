@@ -1,4 +1,5 @@
 """The daily odds slips: the selection rules, what is stored, and that a stored slip cannot be edited."""
+import json
 import math
 from datetime import UTC, datetime, timedelta
 
@@ -12,12 +13,16 @@ from pitchside.accas import (
     build_slips,
     fair_odds,
     label,
+    load_availability,
     offered,
+    site_market,
     win_probability,
 )
+from pitchside.confidence import RATED_LEAGUES
 from pitchside.db.markets import seed_markets
 from pitchside.db.predictions import ensure_model_version
 from pitchside.db.teams import load_aliases, seed_leagues
+from pitchside.markets.registry import MARKETS
 
 
 def day_of(*probs_per_match):
@@ -62,9 +67,36 @@ def test_the_same_day_gives_the_same_slip():
 def test_labels_read_like_a_betting_site():
     assert label("ou_total", 2.5, "over", "A", "B") == "Over 2.5 goals"
     assert label("double_chance", None, "1x", "Arsenal", "Leeds") == "Arsenal or draw"
-    assert label("btts", None, "yes", "A", "B") == "Both teams to score"
+    assert label("btts", None, "yes", "A", "B") == "Both teams to score (GG)"
+    assert label("btts", None, "no", "A", "B") == "Both teams not to score (NG)"
     assert label("ou_home", 1.5, "over", "Arsenal", "Leeds") == "Arsenal over 1.5 goals"
     assert label("1x2", None, "away", "A", "B") == "B to win"
+
+
+def test_a_leagues_own_list_limits_its_markets_and_lines(tmp_path):
+    f = tmp_path / "availability.json"
+    f.write_text(json.dumps({
+        "site": "X", "site_names": {"ou_total": "Over/Under", "ou_home": "{home} Over/Under"},
+        "default": {"confirmed_on": None, "lines_confirmed": False, "markets": {"1x2": None, "ou_total": [1.5, 2.5]}},
+        "leagues": {"EPL": {"confirmed_on": "2026-10-06", "lines_confirmed": True, "markets": {"ou_total": [2.5]}}, "LALIGA": {"confirmed_on": None, "lines_confirmed": False}}}))
+    avail = load_availability(f)
+    assert offered("ou_total", 2.5, "EPL", avail) and not offered("ou_total", 1.5, "EPL", avail) and not offered("1x2", None, "EPL", avail)
+    assert offered("ou_total", 1.5, "LALIGA", avail) and offered("1x2", None, "LALIGA", avail)      # no list of its own: the default list applies
+    assert not offered("btts", None, "LALIGA", avail)
+    assert site_market("ou_home", "Arsenal", "Leeds", avail) == "Arsenal Over/Under" and site_market("btts", "A", "B", avail) is None
+
+
+def test_a_missing_availability_file_falls_back_to_the_built_in_list(tmp_path):
+    avail = load_availability(tmp_path / "missing.json")
+    assert offered("btts", None, "EPL", avail) and offered("ou_total", 2.5, "EPL", avail) and not offered("correct_score", None, "EPL", avail)
+
+
+def test_the_shipped_availability_file_is_complete_and_only_names_markets_we_price():
+    avail = load_availability()
+    assert set(RATED_LEAGUES) <= set(avail["leagues"])
+    for market, lines in avail["default"]["markets"].items():
+        assert market in MARKETS and (lines is None or all(isinstance(x, int | float) for x in lines))
+        assert market in avail["site_names"]
 
 
 # ---- stored ------------------------------------------------------------------------------------------------------

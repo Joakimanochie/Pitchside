@@ -3,8 +3,8 @@
     uv run python -m pitchside.accas
 
 How a slip is built (RULES below), in plain words:
-  * one leg per match, only from markets every betting site lists (result, double chance, total goals 0.5 to 4.5, a team's goals, both teams to score),
-    only for the five rated leagues, only matches that have not kicked off;
+  * one leg per match, only from the markets and lines listed in data/market_availability.json for the match's league (result, double chance, total goals, a team's goals,
+    both teams to score), only for the five rated leagues, only matches that have not kicked off;
   * a leg's fair odds are 1 / probability. The slip's fair odds are the product of its legs'; bookmakers pay less because each price carries their margin;
   * for a target T the safest legs are taken first (highest probability, but never above 95%: below about 1.05 a site will not take the bet), and the last leg is the smallest price that lands the total
     over T. If the day has too few matches to get there with safe legs, the ceiling comes down step by step until it can;
@@ -12,9 +12,12 @@ How a slip is built (RULES below), in plain words:
     No selection rule changes that, so the page shows the figure instead of a label like "sure".
 A slip is stored once per day and target before its first kickoff and never changed; how it turned out is read from the settlements of its legs.
 """
+import json
 import os
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from functools import lru_cache
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import psycopg
@@ -48,11 +51,35 @@ class Leg:
         return 1.0 / self.p
 
 
-def offered(market_id: str, line: float | None) -> bool:
-    if market_id not in WIDELY_OFFERED:
+AVAILABILITY_PATH = Path(__file__).resolve().parents[2] / "data" / "market_availability.json"
+
+
+@lru_cache(maxsize=4)
+def load_availability(path: Path = AVAILABILITY_PATH) -> dict:
+    """The site's market list from data/market_availability.json; the built-in list when the file is missing so the pipeline never stops on it."""
+    if not path.exists():
+        return {"site": "betting sites", "site_names": {}, "default": {"confirmed_on": None, "lines_confirmed": False, "markets": WIDELY_OFFERED}, "leagues": {}}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def league_markets(avail: dict, league: str | None) -> dict:
+    entry = avail.get("leagues", {}).get(league or "", {})
+    return entry.get("markets") or avail["default"]["markets"]
+
+
+def offered(market_id: str, line: float | None, league: str | None = None, avail: dict | None = None) -> bool:
+    """Whether the site lists this market (and line) for a match of `league`."""
+    markets = league_markets(avail or load_availability(), league)
+    if market_id not in markets:
         return False
-    lines = WIDELY_OFFERED[market_id]
+    lines = markets[market_id]
     return lines is None or (line is not None and round(float(line), 2) in lines)
+
+
+def site_market(market_id: str, home: str, away: str, avail: dict | None = None) -> str | None:
+    """The name of the market on the site, so a user knows where to look: 'Over/Under', 'GG/NG', 'Arsenal Over/Under'."""
+    name = (avail or load_availability()).get("site_names", {}).get(market_id)
+    return name.format(home=home, away=away) if name else None
 
 
 def build_slip(by_match: dict[int, list[Leg]], target: float) -> list[Leg] | None:
@@ -99,12 +126,15 @@ def fair_odds(legs: list[Leg]) -> float:
 
 def _candidates(conn: psycopg.Connection, now: datetime) -> dict:
     """{slip_date: {match_id: [Leg]}} from the newest goals-model run of every upcoming match in a rated league."""
-    runs = {mid: run for mid, run in conn.execute(      # the newest goals-model run of each upcoming match (every run writes one context row per match)
-        "SELECT DISTINCT ON (c.match_id) c.match_id, c.run_id FROM prediction_context c JOIN prediction_runs r ON r.id = c.run_id JOIN matches m ON m.id = c.match_id "
-        "WHERE m.status = 'scheduled' AND m.kickoff > %s AND m.league_id = ANY(%s) AND r.run_type = 'weekly' AND r.model_version_id LIKE 'goals-dc-%%' "
-        "ORDER BY c.match_id, r.created_at DESC", (now, list(RATED_LEAGUES)))}
+    runs, leagues = {}, {}
+    for mid, run, league in conn.execute(      # the newest goals-model run of each upcoming match (every run writes one context row per match)
+            "SELECT DISTINCT ON (c.match_id) c.match_id, c.run_id, m.league_id FROM prediction_context c JOIN prediction_runs r ON r.id = c.run_id JOIN matches m ON m.id = c.match_id "
+            "WHERE m.status = 'scheduled' AND m.kickoff > %s AND m.league_id = ANY(%s) AND r.run_type = 'weekly' AND r.model_version_id LIKE 'goals-dc-%%' "
+            "ORDER BY c.match_id, r.created_at DESC", (now, list(RATED_LEAGUES))):
+        runs[mid], leagues[mid] = run, league
     if not runs:
         return {}
+    avail = load_availability()
     rows = conn.execute(
         "SELECT p.id, p.match_id, p.market_id, p.line, p.selection, p.probability, m.kickoff, p.run_id FROM predictions p JOIN matches m ON m.id = p.match_id "
         "WHERE p.match_id = ANY(%s) AND p.market_id = ANY(%s) AND p.run_id = ANY(%s)",
@@ -113,7 +143,7 @@ def _candidates(conn: psycopg.Connection, now: datetime) -> dict:
     days: dict = {}
     for pid, mid, market, line, sel, prob, kickoff in rows:
         line = None if line is None else float(line)
-        if not offered(market, line):
+        if not offered(market, line, leagues[mid], avail):
             continue
         day = kickoff.astimezone(UK).date()
         days.setdefault(day, {}).setdefault(mid, []).append(Leg(pid, mid, market, line, sel, float(prob)))
@@ -155,7 +185,7 @@ def label(market_id: str, line: float | None, selection: str, home: str, away: s
     if market_id in ("ou_home", "ou_away"):
         return f"{home if market_id == 'ou_home' else away} {selection} {n} goals"
     if market_id == "btts":
-        return "Both teams to score" if selection == "yes" else "Both teams not to score"
+        return "Both teams to score (GG)" if selection == "yes" else "Both teams not to score (NG)"
     return f"{market_id} {selection}"
 
 

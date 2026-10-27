@@ -233,6 +233,8 @@ export interface SlipLeg {
 	home: string;
 	away: string;
 	bet: string;
+	/** where to find the bet on the betting site, e.g. "Over/Under" or "GG/NG" */
+	market: string | null;
 	p: number;
 	/** 0 High, 1 Medium, 2 Low, 3 not rated */
 	tier: number;
@@ -250,6 +252,8 @@ export interface Slip {
 export interface OddsFile {
 	generated_at: string;
 	rules: string;
+	/** which betting site's market list the slips were built from, and how far each league's list has been checked */
+	availability?: { site: string; leagues: Record<string, { confirmed_on: string | null; lines_confirmed: boolean }> };
 	days: { date: string; slips: Slip[] }[];
 	record: { target: number; slips: number; won: number; expected: number }[];
 }
