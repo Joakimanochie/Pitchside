@@ -1,11 +1,12 @@
 name: Odds feed probe
 
 # Checks what OddsPapi covers (SportyBet, markets, lines) using the ODDS_API_KEY secret; prints no secret. Safe to delete once a feed is chosen.
-# Runs by hand, and every Saturday morning (matchday, when prices are posted). Each run uses about 5 of the free plan's 250 requests a month; remove the schedule once we have the answer.
+# Runs by hand, and every morning for about a week while the real feed is built into the daily pipeline. Each run uses about 5 of the free plan's 250 requests a month
+# (about 35 for the week); delete this file, or at least the schedule, once the pipeline reads prices itself.
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 8 * * 6"
+    - cron: "0 8 * * *"
 
 jobs:
   probe:
