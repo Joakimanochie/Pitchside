@@ -25,7 +25,7 @@ LEAGUES = {"EPL": ("england", "premierleague"), "LALIGA": ("spain", "laliga"), "
 
 
 def load_key() -> str:
-    key = os.environ.get("ODDS_API_KEY", "")
+    key = os.environ.get("ODDS_API_KEY", "").strip().strip("\"'")
     if not key and Path(".env").exists():
         for line in Path(".env").read_text(encoding="utf-8").splitlines():
             name, _, value = line.partition("=")
@@ -68,6 +68,21 @@ def main() -> int:
     tours, _ = call("/tournaments", key, sportId=FOOTBALL)
     if isinstance(tours, dict) and "error" in tours:
         print("Tournaments call failed:", tours)
+        if tours["error"] == 401:
+            raw = os.environ.get("ODDS_API_KEY", "")
+            stray = raw != raw.strip()
+            quoted = raw.strip()[:1] in ('"', "'")
+            inner_space = " " in raw.strip()
+            print(f"Key as stored: {len(raw)} characters; stray whitespace: {stray}; quotes around it: {quoted}; a space inside: {inner_space}")
+            old_url = "https://api.oddspapi.io/v4/sports?" + urllib.parse.urlencode({"apiKey": key})
+            old = urllib.request.Request(old_url, headers={"User-Agent": "pitchside-probe"})
+            try:
+                with urllib.request.urlopen(old, timeout=30) as r:
+                    print(f"The older v4 address ACCEPTS this key (HTTP {r.status}): this key is for the v4 API, not v5.")
+            except urllib.error.HTTPError as e:
+                print(f"The older v4 address also refuses it (HTTP {e.code}): {e.read().decode('utf-8', 'replace')[:120].replace(key, '<key>')}")
+            except OSError as e:
+                print("The older v4 address could not be reached:", e)
         return 1
     found: dict[str, int] = {}
     print("Our leagues in OddsPapi (football = sportId 10):")
