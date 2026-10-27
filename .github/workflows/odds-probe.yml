@@ -1,6 +1,6 @@
-name: Odds API probe
+name: Odds feed probe
 
-# Manual only. Checks what The Odds API covers using the ODDS_API_KEY secret; prints no secret. Safe to delete once a feed is chosen.
+# Manual only. Checks what OddsPapi covers (SportyBet, markets, lines) using the ODDS_API_KEY secret; prints no secret. Safe to delete once a feed is chosen.
 on:
   workflow_dispatch:
 
@@ -12,7 +12,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Probe The Odds API
+      - name: Probe OddsPapi
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
-        run: python scripts/probe_odds_api.py
+        run: python scripts/probe_oddspapi.py
