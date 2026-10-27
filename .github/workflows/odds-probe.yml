@@ -1,22 +1,37 @@
 name: Odds feed probe
 
-# Checks what OddsPapi covers (SportyBet, markets, lines) using the ODDS_API_KEY secret; prints no secret. Safe to delete once a feed is chosen.
-# Runs by hand, and every morning for about a week while the real feed is built into the daily pipeline. Each run uses about 5 of the free plan's 250 requests a month
-# (about 35 for the week); delete this file, or at least the schedule, once the pipeline reads prices itself.
+# Checks what OddsPapi covers (SportyBet, markets, lines, prices) using the ODDS_API_KEY secret; prints no secret.
+# Runs by hand, and every morning for about a week while the real feed is built into the daily pipeline, but only on a day with a fixture in the next 24 hours
+# (counted from our own database, which costs no OddsPapi request). Each run uses about 5 of the free plan's 250 requests a month (about 35 for the week).
+# Delete this file, or at least the schedule, once the pipeline reads prices itself.
 on:
   workflow_dispatch:
   schedule:
     - cron: "0 8 * * *"
+
+permissions:
+  contents: read
 
 jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install runtime dependencies only
+        run: uv sync --frozen --no-dev
+
+      - name: Any fixtures in the next 24 hours?
+        id: fixtures
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: echo "matches=$(uv run --frozen --no-dev python scripts/fixture_count.py)" >> "$GITHUB_OUTPUT"
+
       - name: Probe OddsPapi
+        # A manual run always probes; a scheduled one only when there is a fixture.
+        if: ${{ github.event_name == 'workflow_dispatch' || steps.fixtures.outputs.matches != '0' }}
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
-        run: python scripts/probe_oddspapi.py
+        run: uv run --frozen --no-dev python scripts/probe_oddspapi.py
