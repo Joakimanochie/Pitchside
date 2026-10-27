@@ -122,7 +122,7 @@
 		<h2 class="h2">We would rather tell you where it is weak</h2>
 		<ul>
 			<li><b>Bookmakers predict results better than we do.</b> In our own tests, and following our numbers against their prices lost money.</li>
-			<li><b>It does not know injuries or suspensions.</b> Lineups are used only once clubs announce them, about an hour before kickoff.</li>
+			<li><b>It does not know injuries or suspensions.</b> Lineups are not used yet: the numbers come from past results only.</li>
 			<li><b>The European cups are new and experimental.</b> The result markets beat the usual frequencies in tests; goals totals did not.</li>
 			<li><b>It is not advice and it takes no bets.</b> For people aged 18 and over. <a href="/responsible-gambling">Responsible gambling</a></li>
 		</ul>

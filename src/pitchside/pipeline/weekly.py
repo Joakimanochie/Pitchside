@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 import psycopg
 
+from pitchside.accas import build_slips
 from pitchside.confidence import RATED_LEAGUES
 from pitchside.db.cup_teams import CupTeams
 from pitchside.db.markets import seed_markets
@@ -525,6 +526,7 @@ def run_leagues(conn: psycopg.Connection, league_ids: list[str], days: int = 8, 
         attempt(lid, "counts", predict_counts, conn, lid, today, days, force)
         attempt(lid, "card_timing", predict_card_timing, conn, lid, today, days, force)
         attempt(lid, "players", predict_players, conn, lid, today, days, force)
+    attempt("accas", "all", build_slips, conn)   # the daily 2 to 30 odds slips, after every match of the window has its predictions
     attempt("odds", "all", ingest_odds, conn)  # after fixtures exist, so the prices find their matches; one file covers every league
     return report, errors
 

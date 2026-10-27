@@ -24,12 +24,12 @@ def db(conn):
     return conn
 
 
-def scheduled(conn, kickoff, espn="900", day_offset=0):
+def scheduled(conn, kickoff, espn="900", day_offset=0, away="Leeds United"):
     kickoff = kickoff - timedelta(days=day_offset)
     return conn.execute(
         "INSERT INTO matches (league_id, season, match_date, kickoff, home_team_id, away_team_id, status, source_ids) "
-        "VALUES ('EPL', 2026, %s, %s, (SELECT id FROM teams WHERE canonical_name = 'Arsenal'), (SELECT id FROM teams WHERE canonical_name = 'Leeds United'), 'scheduled', jsonb_build_object('espn', %s::text)) RETURNING id",
-        (kickoff.date(), kickoff, espn)).fetchone()[0]
+        "VALUES ('EPL', 2026, %s, %s, (SELECT id FROM teams WHERE canonical_name = 'Arsenal'), (SELECT id FROM teams WHERE canonical_name = %s), 'scheduled', jsonb_build_object('espn', %s::text)) RETURNING id",
+        (kickoff.date(), kickoff, away, espn)).fetchone()[0]
 
 
 def payload(status, home_score="2", away_score="1", goals=None):
@@ -66,7 +66,7 @@ def test_a_played_match_is_finished_and_settled_the_same_day(db):
 
 def test_a_match_still_being_played_or_too_recent_is_left_alone(db):
     live = scheduled(db, datetime.now(UTC) - timedelta(hours=3), "901")
-    recent = scheduled(db, datetime.now(UTC) - timedelta(minutes=60), "902")
+    recent = scheduled(db, datetime.now(UTC) - timedelta(minutes=60), "902", away="Chelsea")      # another opponent, so the two rows never collide whatever time the test runs
     out = finish_matches(db, fetch=fake({"901": payload("STATUS_SECOND_HALF"), "902": payload("STATUS_FULL_TIME")}))
     assert out["checked"] == 1 and out["finished"] == 0
     assert {r[0] for r in db.execute("SELECT status FROM matches WHERE id IN (%s, %s)", (live, recent))} == {"scheduled"}

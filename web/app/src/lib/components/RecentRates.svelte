@@ -35,7 +35,7 @@
 		hit rates on their own predicted worse than the model (over 2.5 goals in the last 5 matches did worse than a coin flip). Read them as a description of recent matches, not a prediction.
 	</p>
 	{#if enough}
-		<div class="tbl-wrap">
+		<div class="tbl-wrap" tabindex="0" role="region" aria-label="Table, scrolls sideways">
 			<table>
 				<thead>
 					<tr>

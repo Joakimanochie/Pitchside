@@ -1,15 +1,17 @@
 <script lang="ts">
 	import { pct0 } from '#lib/labels.js';
-	import { timeLabel } from '#lib/time.svelte.js';
+	import { clock, timeLabel } from '#lib/time.svelte.js';
 	import type { FixtureSummary } from '#lib/types.js';
 
 	let { fixture, leagueName }: { fixture: FixtureSummary; leagueName: string } = $props();
 	const p = $derived(fixture.p);
+	// Kicked off and not yet in Results: the match is being played, and its numbers stay here for people watching it.
+	const live = $derived(clock.now > 0 && new Date(fixture.kickoff).getTime() <= clock.now);
 </script>
 
 <li>
 	<a class="match-card" href="/app/match/{fixture.id}">
-		<div class="kick"><span class="kick-time">{timeLabel(fixture.kickoff)}</span><span class="kick-league">{leagueName}</span></div>
+		<div class="kick"><span class="kick-time">{timeLabel(fixture.kickoff)}</span>{#if live}<span class="live-tag">In play</span>{/if}<span class="kick-league">{leagueName}</span></div>
 		<div class="teams"><span>{fixture.home}</span><span><span class="vs">v </span>{fixture.away}</span></div>
 		<div class="probs">
 			<div class="bar3" aria-hidden="true">

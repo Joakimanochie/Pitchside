@@ -225,3 +225,31 @@ export interface Index {
 		backtest: { matches: number; from: string; to: string; selections: number } | null;
 	};
 }
+
+export interface SlipLeg {
+	match: number;
+	league: string;
+	kickoff: string;
+	home: string;
+	away: string;
+	bet: string;
+	p: number;
+	/** 0 High, 1 Medium, 2 Low, 3 not rated */
+	tier: number;
+	/** 1 won, 0 lost, 2 stake returned, 3 not scored yet */
+	outcome: number;
+}
+export interface Slip {
+	date: string;
+	target: number;
+	fair_odds: number;
+	p: number;
+	status: 'pending' | 'won' | 'lost';
+	legs: SlipLeg[];
+}
+export interface OddsFile {
+	generated_at: string;
+	rules: string;
+	days: { date: string; slips: Slip[] }[];
+	record: { target: number; slips: number; won: number; expected: number }[];
+}

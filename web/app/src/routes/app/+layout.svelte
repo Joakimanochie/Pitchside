@@ -8,7 +8,7 @@
 	let { data, children }: LayoutProps = $props();
 
 	const onRecord = $derived(page.url.pathname.startsWith('/app/record'));
-	const route = $derived(onRecord ? 'record' : page.url.pathname.startsWith('/app/results') ? 'results' : 'fixtures');
+	const route = $derived(onRecord ? 'record' : page.url.pathname.startsWith('/app/results') ? 'results' : page.url.pathname.startsWith('/app/odds') ? 'odds' : 'fixtures');
 	const stamp = $derived(
 		new Date(data.index.generated_at).toLocaleString('en-GB', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: clock.local ? undefined : 'UTC' })
 	);
@@ -66,6 +66,7 @@
 			</a>
 			<div class="nav-links">
 				<a href="/app" aria-current={route === 'fixtures' ? 'page' : undefined} data-route="fixtures">Fixtures</a>
+				<a href="/app/odds" aria-current={route === 'odds' ? 'page' : undefined} data-route="odds">Odds</a>
 				<a href="/app/results" aria-current={route === 'results' ? 'page' : undefined} data-route="results">Results</a>
 				<a href="/app/record" aria-current={route === 'record' ? 'page' : undefined} data-route="record">Track record</a>
 			</div>

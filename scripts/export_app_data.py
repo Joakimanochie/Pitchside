@@ -4,12 +4,14 @@ The web app holds no database credentials. The daily pipeline writes these files
 
     web/app/static/data/index.json          fixtures (with the match-result probabilities and ratings), markets, leagues, live record, validation
     web/app/static/data/match/<id>.json     every stored prediction for the match, plus recent results and head-to-head
+    web/app/static/data/odds.json           the daily 2 to 30 odds slips and their record
 
 Usage: uv run python scripts/export_app_data.py
 """
 import json
 import os
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 import psycopg
@@ -17,6 +19,7 @@ import psycopg
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import export_common as base
 
+from pitchside import accas
 from pitchside.confidence import RATED_LEAGUES, TIERS, UNRATED, load_rules, tier_for
 from pitchside.db.migrate import _load_env
 from pitchside.markets.players import LOG_STATS
@@ -165,6 +168,37 @@ def export_results(conn: psycopg.Connection, rules: dict, out_dir: Path) -> list
     return entries
 
 
+def export_odds(conn: psycopg.Connection, rules: dict, out_path: Path) -> dict:
+    """The daily 2 to 30 odds slips with how every leg and slip turned out, and the record of finished slips against what the model expected of them."""
+    rows = [] if conn.execute("SELECT to_regclass('accumulators')").fetchone()[0] is None else conn.execute(
+        "SELECT a.id, a.slip_date, a.target_odds, a.fair_odds, a.win_probability, l.position, p.id, m.id, m.league_id, m.kickoff, th.canonical_name, ta.canonical_name, "
+        "p.market_id, p.line, p.selection, p.probability, s.result "
+        "FROM accumulators a JOIN accumulator_legs l ON l.accumulator_id = a.id JOIN predictions p ON p.id = l.prediction_id JOIN matches m ON m.id = l.match_id "
+        "JOIN teams th ON th.id = m.home_team_id JOIN teams ta ON ta.id = m.away_team_id LEFT JOIN settlements s ON s.prediction_id = p.id "
+        "WHERE a.slip_date >= current_date - 30 ORDER BY a.slip_date DESC, a.target_odds, l.position").fetchall()
+    slips: dict = {}
+    for acc, day, target, fair, win_p, pos, pid, mid, league, kickoff, home, away, market, line, sel, prob, result in rows:
+        slip = slips.setdefault(acc, {"date": day.isoformat(), "target": float(target), "fair_odds": float(fair), "p": float(win_p), "legs": []})
+        line = None if line is None else float(line)
+        tier = UNRATED if league not in RATED_LEAGUES else TIERS.index(tier_for(rules, market, MARKETS[market].family, float(prob)))
+        slip["legs"].append({"match": mid, "league": league, "kickoff": kickoff.isoformat(), "home": home, "away": away, "bet": accas.label(market, line, sel, home, away),
+                             "p": round(float(prob), 4), "tier": tier, "outcome": OUTCOME.get(result, 3)})
+    for slip in slips.values():
+        outcomes = [leg["outcome"] for leg in slip["legs"]]
+        slip["status"] = "lost" if 0 in outcomes else "pending" if 3 in outcomes else "won"      # a leg that was void or returned its stake drops out of the slip
+    days: dict = {}
+    for slip in slips.values():
+        days.setdefault(slip["date"], []).append(slip)
+    record = []
+    for target in accas.TARGETS:
+        done = [x for x in slips.values() if x["target"] == target and x["status"] != "pending"]
+        record.append({"target": target, "slips": len(done), "won": sum(1 for x in done if x["status"] == "won"), "expected": round(sum(x["p"] for x in done), 2)})
+    out = {"generated_at": datetime.now(UTC).isoformat(timespec="seconds"), "rules": accas.RULES,
+           "days": [{"date": d, "slips": sorted(v, key=lambda x: x["target"])} for d, v in sorted(days.items(), reverse=True)], "record": record}
+    out_path.write_text(json.dumps(out, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
+    return out
+
+
 def main() -> None:
     _load_env()
     rules = load_rules()
@@ -189,6 +223,7 @@ def main() -> None:
                                    "tiers": {sel: tier for sel, _p, _pick, tier in x12}})
     with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
         results = export_results(conn, rules, OUT / "result")
+        export_odds(conn, rules, OUT / "odds.json")
     index = {k: v for k, v in snap.items() if k not in ("fixtures", "preds")}
     index["results"] = results
     index["fixtures"] = index_fixtures

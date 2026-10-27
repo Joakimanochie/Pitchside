@@ -10,6 +10,9 @@ next to a prediction and compared with it. They are never a model input.
 | SportyBet (or any betting site) | The prices a user actually bets at | None. There is no public API and scraping is not allowed without confirming the terms | Not used | Not built. A manual paste importer is the safe route (`OddsProvider` in `src/pitchside/odds/provider.py`) |
 | A licensed odds API (for example The Odds API) | Live prices from many bookmakers, more markets | Needs a paid plan and a key | Check the plan's markets and redistribution terms before use | Not built. Plugs in as another `OddsProvider` |
 
+## The Odds tab and market availability
+The Odds tab uses a fixed list of markets that every betting site lists (`WIDELY_OFFERED` in `src/pitchside/accas.py`). It does not check any one site for a given match, and its odds are the model's fair odds. Showing only markets a site really has open, with the site's own price, needs a licensed odds API (for example The Odds API, paid) behind the `OddsProvider` seam; scraping a betting site is not allowed without confirming its terms and is not built.
+
 ## How the data is kept
 - `odds_snapshots` stores each price with the time it was fetched, append-only; only changed prices are written. `v_latest_odds` gives the newest price per selection.
 - No row-level-security policy gives the anonymous role access: odds are available to the web app only through the pipeline's exported files, which sit behind the access lock.

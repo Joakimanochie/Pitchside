@@ -36,14 +36,14 @@ def test_migrations_apply_once(conn):
     assert names == ["001_warehouse.sql", "002_predictions.sql", "003_settlements.sql", "004_security_hardening.sql",
                      "005_track_record_views.sql",
                      "006_prediction_context.sql", "007_odds.sql", "008_shot_events.sql", "009_lineups.sql", "010_espn_match_log.sql",
-                     "011_prediction_guards.sql"]
+                     "011_prediction_guards.sql", "012_accumulators.sql"]
 
 
 def test_predictions_are_append_only(conn):
     run_id = seed(conn)
     pid = add_prediction(conn, run_id)
     conn.commit()
-    for sql in ("UPDATE predictions SET probability = 0.9", "DELETE FROM predictions", "TRUNCATE predictions, settlements"):
+    for sql in ("UPDATE predictions SET probability = 0.9", "DELETE FROM predictions", "TRUNCATE predictions, settlements, accumulator_legs"):
         with pytest.raises(psycopg.errors.RaiseException, match="append-only"):
             conn.execute(sql)
         conn.rollback()

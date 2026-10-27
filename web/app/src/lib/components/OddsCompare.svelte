@@ -35,7 +35,7 @@
 		{#each odds.markets as m (m.market + m.line)}
 			<div class="market-block">
 				<h3 class="team">{title(m)} <span class="muted small">· bookmaker margin {(m.margin * 100).toFixed(1)}%</span></h3>
-				<div class="tbl-wrap">
+				<div class="tbl-wrap" tabindex="0" role="region" aria-label="Table, scrolls sideways">
 					<table>
 						<thead>
 							<tr><th scope="col">Selection</th><th scope="col">Our probability</th><th scope="col">Bookmakers’ view</th><th scope="col">Gap</th><th scope="col">Best price</th><th scope="col">If we are right</th></tr>

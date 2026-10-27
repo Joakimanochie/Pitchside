@@ -44,7 +44,7 @@
 			</div>
 		{/each}
 	</div>
-	<div class="tbl-wrap">
+	<div class="tbl-wrap" tabindex="0" role="region" aria-label="Table, scrolls sideways">
 		<table>
 			<thead><tr><th>Day</th><th class="num">People</th><th class="num">New people</th><th class="num">Views</th></tr></thead>
 			<tbody>
@@ -59,28 +59,28 @@
 		<div>
 			<h2>How people arrive</h2>
 			<p class="small">The site asks visitors to sign in first, which hides where they came from. A link with <code>?ref=whatsapp</code> (or <code>utm_source</code>) on the end is counted under that name.</p>
-			<div class="tbl-wrap"><table><thead><tr><th>Source</th><th class="num">Visits</th><th class="num">People</th></tr></thead><tbody>
+			<div class="tbl-wrap" tabindex="0" role="region" aria-label="Table, scrolls sideways"><table><thead><tr><th>Source</th><th class="num">Visits</th><th class="num">People</th></tr></thead><tbody>
 				{#each data.referrers as r (r.source)}<tr><td>{r.source}</td><td class="num">{r.visits}</td><td class="num">{r.people}</td></tr>{/each}
 			</tbody></table></div>
 		</div>
 		<div>
 			<h2>Where from, on what</h2>
-			<div class="tbl-wrap"><table><thead><tr><th>Country</th><th class="num">People</th><th class="num">Views</th></tr></thead><tbody>
+			<div class="tbl-wrap" tabindex="0" role="region" aria-label="Table, scrolls sideways"><table><thead><tr><th>Country</th><th class="num">People</th><th class="num">Views</th></tr></thead><tbody>
 				{#each data.countries as r (r.country)}<tr><td>{r.country}</td><td class="num">{r.people}</td><td class="num">{r.views}</td></tr>{/each}
 			</tbody></table></div>
-			<div class="tbl-wrap"><table><thead><tr><th>Device</th><th class="num">Views</th></tr></thead><tbody>
+			<div class="tbl-wrap" tabindex="0" role="region" aria-label="Table, scrolls sideways"><table><thead><tr><th>Device</th><th class="num">Views</th></tr></thead><tbody>
 				{#each data.devices as r (r.device)}<tr><td>{r.device}</td><td class="num">{r.views}</td></tr>{/each}
 			</tbody></table></div>
 		</div>
 	</div>
 
 	<h2>Most viewed pages (30 days)</h2>
-	<div class="tbl-wrap"><table><thead><tr><th>Page</th><th class="num">Views</th><th class="num">People</th></tr></thead><tbody>
+	<div class="tbl-wrap" tabindex="0" role="region" aria-label="Table, scrolls sideways"><table><thead><tr><th>Page</th><th class="num">Views</th><th class="num">People</th></tr></thead><tbody>
 		{#each data.pages as r (r.path)}<tr><td>{r.path}</td><td class="num">{r.views}</td><td class="num">{r.people}</td></tr>{/each}
 	</tbody></table></div>
 
 	<h2>People</h2>
-	<div class="tbl-wrap"><table><thead><tr><th>Email</th><th>First seen</th><th>Last seen</th><th class="num">Days active</th><th class="num">Views</th></tr></thead><tbody>
+	<div class="tbl-wrap" tabindex="0" role="region" aria-label="Table, scrolls sideways"><table><thead><tr><th>Email</th><th>First seen</th><th>Last seen</th><th class="num">Days active</th><th class="num">Views</th></tr></thead><tbody>
 		{#each data.people as r (r.email)}<tr><td>{r.email}</td><td>{r.first_seen}</td><td>{r.last_seen}</td><td class="num">{r.days}</td><td class="num">{r.views}</td></tr>{/each}
 		{#if !data.people.length}<tr><td colspan="5">No visitors recorded yet.</td></tr>{/if}
 	</tbody></table></div>

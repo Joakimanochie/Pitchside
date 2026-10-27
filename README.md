@@ -16,6 +16,10 @@ About 210 markets per match: result, double chance, handicaps, over/under, both 
 
 Each number carries a High, Medium or Low confidence rating, set from how the model did on past matches of that kind (the Championship and the cups are not rated yet). The Track record page scores every stored prediction after the match. A match leaves Fixtures at kickoff and appears in Results (grouped by game week) once played: the result-based markets are scored within the hour, and corners, cards, shots and player markets the next morning when the full statistics are published.
 
+## The Odds tab
+
+Each day the Odds tab offers slips of about 2, 3, 5, 10, 20 and 30 odds, built by `src/pitchside/accas.py` from the model's most likely outcomes in markets every betting site lists (result, double chance, total goals, a team's goals, both teams to score). The odds are the model's fair odds, not bookmaker prices, and the page says that a slip's chance of winning is about 1 ÷ its odds. Slips are stored before kickoff (migration 012) and scored from the settlements of their legs; the tab shows how past slips did against what the model expected. Which markets a given site offers for a given match is not checked live: that needs a licensed odds feed (see [docs/odds-sources.md](docs/odds-sources.md)).
+
 ## How it works
 
 ```
@@ -78,7 +82,7 @@ Never commit `.env` or any key. See [docs/operations.md](docs/operations.md) for
 
 ## Access
 
-The site's front door is a public landing page at `/` (with the method, terms, privacy and responsible-gambling pages). The app itself lives under `/app` (fixtures, `/app/match/…`, `/app/results`, `/app/record`) together with `/data` and `/api`, and sits behind Cloudflare Access: visitors continue with Google and land on the fixtures. `/admin` (usage, people, feedback) is limited to the operator. Public pages load no prediction data, so none appears in their HTML.
+The site's front door is a public landing page at `/` (with the method, terms, privacy and responsible-gambling pages). The app itself lives under `/app` (fixtures, `/app/match/…`, `/app/odds`, `/app/results`, `/app/record`) together with `/data` and `/api`, and sits behind Cloudflare Access: visitors continue with Google and land on the fixtures. `/admin` (usage, people, feedback) is limited to the operator. Public pages load no prediction data, so none appears in their HTML.
 
 ## Documents
 

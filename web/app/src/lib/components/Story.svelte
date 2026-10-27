@@ -55,7 +55,7 @@
 		<div class="block grid-block">
 			<h2 class="h3">Score by score</h2>
 			<p class="muted small">Down the side: {match.home} goals. Across the top: {match.away} goals.</p>
-			<div class="tbl-wrap">
+			<div class="tbl-wrap" tabindex="0" role="region" aria-label="Table, scrolls sideways">
 				<table class="score-grid">
 					<caption class="sr-only">Probability of each final score, {match.home} goals down the side, {match.away} goals across the top</caption>
 					<thead>

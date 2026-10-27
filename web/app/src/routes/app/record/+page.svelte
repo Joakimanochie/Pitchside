@@ -68,7 +68,7 @@
 			<p class="status-line" style="margin:0 0 1rem">
 				<b>{L.pick_hits} of {L.n}</b> match results picked correctly ({pct0(L.pick_hits / L.n)}). On the match result the model scored <b>{L.log_loss.toFixed(3)}</b> against {L.log_loss_base.toFixed(3)} for simply using how often each outcome usually happens (lower is better).
 			</p>
-			<div class="tbl-wrap">
+			<div class="tbl-wrap" tabindex="0" role="region" aria-label="Table, scrolls sideways">
 				<table>
 					<thead><tr><th scope="col">Market</th><th scope="col">Predicted on average</th><th scope="col">What happened</th></tr></thead>
 					<tbody>{#each marketRows as [t, r] (t)}<tr><td>{t}</td><td>{pct1(r.predicted!)}</td><td>{pct1(r.actual!)}</td></tr>{/each}</tbody>
@@ -81,7 +81,7 @@
 		<div class="panel" style="margin-top:1rem">
 			<details class="data">
 				<summary>Every match scored ({L.n})</summary>
-				<div class="tbl-wrap">
+				<div class="tbl-wrap" tabindex="0" role="region" aria-label="Table, scrolls sideways">
 					<table>
 						<thead><tr><th scope="col">Date</th><th scope="col">League</th><th scope="col">Match</th><th scope="col">Score</th><th scope="col">Home / draw / away</th><th scope="col">Model’s pick</th><th scope="col"><span class="sr-only">Result</span></th></tr></thead>
 						<tbody>
@@ -99,7 +99,7 @@
 				<summary>All {L.selections.toLocaleString()} scored predictions, grouped by probability</summary>
 				<div class="chart-wrap" style="margin-top:1rem">
 					<CalibrationChart points={liveCalibration} />
-					<div class="tbl-wrap">
+					<div class="tbl-wrap" tabindex="0" role="region" aria-label="Table, scrolls sideways">
 						<table>
 							<thead><tr><th scope="col">Predicted range</th><th scope="col">Average predicted</th><th scope="col">Actually happened</th><th scope="col">Predictions</th></tr></thead>
 							<tbody>{#each liveCalibration as p (p.from)}<tr><td>{Math.round(p.from * 100)}–{Math.round(Math.min(p.to, 1) * 100)}%</td><td>{pct1(p.predicted)}</td><td>{pct1(p.actual)}</td><td>{p.n.toLocaleString()}</td></tr>{/each}</tbody>
@@ -112,7 +112,7 @@
 		<div class="panel" style="margin-top:1rem">
 			<h3 class="h3">Live record by model version</h3>
 			<p class="muted">Each kind of prediction is its own model version, with its own live record. A version shows numbers once matches it predicted have finished; below {MIN_LIVE} matches it is too early to read.</p>
-			<div class="tbl-wrap">
+			<div class="tbl-wrap" tabindex="0" role="region" aria-label="Table, scrolls sideways">
 				<table>
 					<thead><tr><th scope="col">Model version</th><th scope="col">Covers</th><th scope="col">Matches scored</th><th scope="col">Predicted on average</th><th scope="col">What happened</th></tr></thead>
 					<tbody>
@@ -153,7 +153,7 @@
 				Each prediction is rated High, Medium or Low from how the model did on past predictions of the same kind. The ratings were built from {C.fitted_on_matches} matches, then checked on the next {C.checked_on_matches} matches (played after {C.until}) that were not used to build them. A rating is only worth showing if higher ratings really did better.
 			</p>
 			<div class="panel" style="margin-top:1.25rem">
-				<div class="tbl-wrap">
+				<div class="tbl-wrap" tabindex="0" role="region" aria-label="Table, scrolls sideways">
 					<table>
 						<thead><tr><th scope="col">Rating</th><th scope="col">Share of predictions</th><th scope="col">Model said</th><th scope="col">Actually happened</th><th scope="col">Better than the plain average by</th></tr></thead>
 						<tbody>{#each C.tiers as t (t.tier)}<tr><td>{t.tier}</td><td>{pct0(t.share)}</td><td>{pct1(t.predicted)}</td><td>{pct1(t.happened)}</td><td><strong>{pct1(t.skill)}</strong></td></tr>{/each}</tbody>
@@ -173,7 +173,7 @@
 			<div class="panel" style="margin-top:1.25rem">
 				<h3 class="h3">Who predicted better?</h3>
 				<p class="muted small" style="margin-top:.4rem">Log loss on the later 40% of matches; lower is better. “Both blended” mixes our probabilities with the bookmakers’, with weights fitted on the earlier matches.</p>
-				<div class="tbl-wrap">
+				<div class="tbl-wrap" tabindex="0" role="region" aria-label="Table, scrolls sideways">
 					<table>
 						<thead><tr><th scope="col">Market and prices</th><th scope="col">Bookmakers</th><th scope="col">Our model</th><th scope="col">Both blended</th></tr></thead>
 						<tbody>
@@ -188,7 +188,7 @@
 			<div class="panel" style="margin-top:1rem">
 				<h3 class="h3">Would backing our gaps have paid?</h3>
 				<p class="muted small" style="margin-top:.4rem">One unit staked on every selection where our probability was at least this many points above the bookmakers’, at the best opening price listed. Match result and over/under 2.5 together.</p>
-				<div class="tbl-wrap">
+				<div class="tbl-wrap" tabindex="0" role="region" aria-label="Table, scrolls sideways">
 					<table>
 						<thead><tr><th scope="col">Our probability above theirs by</th><th scope="col">Bets</th><th scope="col">Won</th><th scope="col">Return per unit staked</th><th scope="col">Margin of error</th></tr></thead>
 						<tbody>
@@ -223,7 +223,7 @@
 			<div class="legend"><span><i></i>What actually happened</span><span><i class="dash"></i>Perfect match with the predictions</span></div>
 			<details class="data">
 				<summary>Show the numbers</summary>
-				<div class="tbl-wrap">
+				<div class="tbl-wrap" tabindex="0" role="region" aria-label="Table, scrolls sideways">
 					<table>
 						<thead><tr><th scope="col">Predicted range</th><th scope="col">Average predicted</th><th scope="col">Actually happened</th><th scope="col">Predictions</th></tr></thead>
 						<tbody>{#each v.calibration as p (p.from)}<tr><td>{Math.round(p.from * 100)}–{Math.round(Math.min(p.to, 1) * 100)}%</td><td>{pct1(p.predicted)}</td><td>{pct1(p.actual)}</td><td>{p.n.toLocaleString()}</td></tr>{/each}</tbody>
@@ -237,7 +237,7 @@
 		<h2 class="h2">Does it add anything beyond a plain average?</h2>
 		<p class="muted">Compared with simply guessing how often each outcome usually happens. A higher share removed means the model carries real information. Lower log loss is better.</p>
 		<div class="panel" style="margin-top:1.25rem">
-			<div class="tbl-wrap">
+			<div class="tbl-wrap" tabindex="0" role="region" aria-label="Table, scrolls sideways">
 				<table>
 					<thead><tr><th scope="col">Group of markets</th><th scope="col">Predictions tested</th><th scope="col">Model log loss</th><th scope="col">Plain-average log loss</th><th scope="col">Share removed</th></tr></thead>
 					<tbody>{#each v.families as f (f.family)}<tr><td>{FAMILIES[f.family]}</td><td>{f.selections.toLocaleString()}</td><td>{f.model.toFixed(4)}</td><td>{f.base.toFixed(4)}</td><td><strong>{f.skill >= 0 ? '+' : ''}{(f.skill * 100).toFixed(1)}%</strong></td></tr>{/each}</tbody>
@@ -250,7 +250,7 @@
 		<h2 class="h2">Against the bookmakers on the match result</h2>
 		<p class="muted">The model beats a league average in every league, but the bookmakers’ closing odds still predict the result better. That is expected: they use lineups and team news, and this model does not.</p>
 		<div class="panel" style="margin-top:1.25rem">
-			<div class="tbl-wrap">
+			<div class="tbl-wrap" tabindex="0" role="region" aria-label="Table, scrolls sideways">
 				<table>
 					<thead><tr><th scope="col">League</th><th scope="col">Matches</th><th scope="col">Model</th><th scope="col">League average</th><th scope="col">Bookmakers</th><th scope="col">Right result: model</th><th scope="col">Right result: bookmakers</th></tr></thead>
 					<tbody>{#each v.leagues as r (r.id)}<tr><td>{r.name}</td><td>{r.matches.toLocaleString()}</td><td>{r.model.toFixed(3)}</td><td>{r.base.toFixed(3)}</td><td>{r.book.toFixed(3)}</td><td>{(r.right_model * 100).toFixed(1)}%</td><td>{(r.right_book * 100).toFixed(1)}%</td></tr>{/each}</tbody>
