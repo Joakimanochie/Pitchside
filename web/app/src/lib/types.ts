@@ -253,6 +253,7 @@ export interface OddsFile {
 	generated_at: string;
 	rules: string;
 	/** which betting site's market list the slips were built from, and how far each league's list has been checked */
+	min_leg_p?: number;
 	availability?: { site: string; leagues: Record<string, { confirmed_on: string | null; lines_confirmed: boolean }> };
 	days: { date: string; slips: Slip[] }[];
 	record: { target: number; slips: number; won: number; expected: number }[];

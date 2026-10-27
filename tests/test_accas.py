@@ -7,6 +7,7 @@ import psycopg
 import pytest
 
 from pitchside.accas import (
+    P_MIN,
     TARGETS,
     Leg,
     build_slip,
@@ -36,7 +37,7 @@ def test_only_widely_offered_markets_and_lines_are_used():
 
 
 def test_a_slip_reaches_its_target_and_its_chance_is_about_one_over_the_odds():
-    day = day_of(*[[0.9, 0.7, 0.5]] * 8)
+    day = day_of(*[[0.9, 0.7, 0.5]] * 40)      # a 30-odds slip of 90% legs needs about 33 of them
     for target in TARGETS:
         legs = build_slip(day, target)
         assert legs is not None
@@ -51,8 +52,15 @@ def test_the_safest_legs_are_used_first_and_the_last_leg_lands_close_to_the_targ
 
 
 def test_no_leg_is_priced_below_what_a_site_takes_or_above_a_long_shot():
-    legs = build_slip(day_of(*[[0.99, 0.97, 0.9, 0.6, 0.2]] * 6), 5)
-    assert all(0.3 <= leg.p <= 0.95 for leg in legs)
+    legs = build_slip(day_of(*[[0.99, 0.97, 0.9, 0.6, 0.2]] * 20), 5)
+    assert all(P_MIN <= leg.p <= 0.95 for leg in legs)
+
+
+def test_a_quiet_day_gets_no_big_slip_padded_with_weak_legs():
+    quiet = day_of(*[[0.9, 0.6, 0.45]] * 8)      # eight 90% legs reach about 2.3 odds and no more
+    assert build_slip(quiet, 2) is not None and all(leg.p >= P_MIN for leg in build_slip(quiet, 2))
+    for target in (5, 10, 20, 30):
+        assert build_slip(quiet, target) is None        # reaching it would need 60% and 45% legs
 
 
 def test_a_day_with_too_few_matches_gets_no_big_slip():
@@ -60,8 +68,8 @@ def test_a_day_with_too_few_matches_gets_no_big_slip():
 
 
 def test_the_same_day_gives_the_same_slip():
-    day = day_of(*[[0.9, 0.7, 0.5]] * 7)
-    assert build_slip(day, 10) == build_slip(day, 10)
+    day = day_of(*[[0.9, 0.7, 0.5]] * 40)
+    assert build_slip(day, 10) is not None and build_slip(day, 10) == build_slip(day, 10)
 
 
 def test_labels_read_like_a_betting_site():
@@ -127,9 +135,9 @@ def predict(conn, match_id, rows):
 
 
 def test_slips_are_stored_once_per_day_and_cannot_be_edited(db):
-    teams = [r[0] for r in db.execute("SELECT canonical_name FROM teams ORDER BY id LIMIT 8")]
-    for i in range(4):
-        mid = upcoming_match(db, 3 + i, teams[2 * i], teams[2 * i + 1])
+    teams = [r[0] for r in db.execute("SELECT canonical_name FROM teams ORDER BY id LIMIT 24")]
+    for i in range(12):       # twelve 82% legs reach about 11 odds, so the 2, 3, 5 and 10 odds slips can all be made from confident picks
+        mid = upcoming_match(db, 2 + i * 0.05, teams[2 * i], teams[2 * i + 1])
         predict(db, mid, [("ou_total", 1.5, "over", 0.82), ("ou_total", 2.5, "over", 0.55), ("1x2", None, "home", 0.5), ("correct_score", None, "1-0", 0.3)])
     first = build_slips(db)
     assert first["slips"] >= 3

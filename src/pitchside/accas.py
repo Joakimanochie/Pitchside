@@ -7,7 +7,8 @@ How a slip is built (RULES below), in plain words:
     both teams to score), only for the five rated leagues, only matches that have not kicked off;
   * a leg's fair odds are 1 / probability. The slip's fair odds are the product of its legs'; bookmakers pay less because each price carries their margin;
   * for a target T the safest legs are taken first (highest probability, but never above 95%: below about 1.05 a site will not take the bet), and the last leg is the smallest price that lands the total
-    over T. If the day has too few matches to get there with safe legs, the ceiling comes down step by step until it can;
+    over T. If the day has too few matches to get there, the ceiling comes down step by step, but never below P_MIN (80%): a slip is made only when confident legs can reach its target,
+    so a quiet day gets only the small slips, or none, rather than a big slip padded with weak legs;
   * the chance that the whole slip wins is the product of the legs' probabilities. It is about 1 / odds: a 30-odds slip wins roughly once in thirty days however it is built.
     No selection rule changes that, so the page shows the figure instead of a label like "sure".
 A slip is stored once per day and target before its first kickoff and never changed; how it turned out is read from the settlements of its legs.
@@ -25,10 +26,10 @@ import psycopg
 from pitchside.confidence import RATED_LEAGUES
 from pitchside.db.migrate import _load_env, apply_migrations
 
-RULES = "acca-1"
+RULES = "acca-2"       # acca-1 had a 30% leg floor, which let quiet days pad big slips with 45% legs
 TARGETS = (2, 3, 5, 10, 20, 30)
 P_MAX = 0.95            # fair odds under about 1.05 are not accepted by betting sites
-P_MIN = 0.30            # a leg less likely than this is not a "most likely outcome"
+P_MIN = 0.80            # a slip is for confident picks: no leg below this, so a quiet day gets no big slip rather than a padded one
 THETAS = [round(P_MAX - 0.02 * i, 2) for i in range(33)]      # the probability ceiling, lowered until the day can reach the target
 UK = ZoneInfo("Europe/London")
 TOTAL_LINES = (0.5, 1.5, 2.5, 3.5, 4.5)

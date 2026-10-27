@@ -23,6 +23,7 @@ SITES = ["sportybet", "1xbet", "bet365", "betway", "bet9ja"]
 # (category, tournament) as OddsPapi names them, compared lower-case with spaces removed.
 LEAGUES = {"EPL": ("england", "premierleague"), "LALIGA": ("spain", "laliga"), "BUNDESLIGA": ("germany", "bundesliga"), "SERIEA": ("italy", "seriea"),
            "LIGUE1": ("france", "ligue1"), "CHAMP": ("england", "championship")}
+KEY_MARKETS = ["Over Under Full Time", "Over Under Team 1", "Over Under Team 2", "Both Teams To Score", "Double Chance Full Time", "Full Time Result"]
 COOLDOWN = {"/fixtures": 2.1, "/odds": 0.6}      # seconds the docs ask us to leave between calls to one endpoint; the others are 1 s
 
 
@@ -168,6 +169,21 @@ def main() -> int:
             print(f"  {name[:38]:38s} {period:9s} {len(lines):3d}  {vals[:14]}{' ...' if len(vals) > 14 else ''}")
         if len(shown) > (45 if site == "sportybet" else 12):
             print(f"  ... and {len(shown) - (45 if site == 'sportybet' else 12)} more kinds")
+        # The prices on the markets our slips use, so they can be set against the model's fair odds for the same match (analysis only: prices are not shown on the site).
+        keep = KEY_MARKETS if site == "sportybet" else KEY_MARKETS[:1]
+        priced: dict[tuple, list] = defaultdict(list)
+        for mid, market in (info.get("markets") or {}).items():
+            m = meta.get(int(mid))
+            if not m or m.get("marketName") not in keep or market.get("marketActive") is False:
+                continue
+            names = {o.get("outcomeId"): o.get("outcomeName") for o in m.get("outcomes", [])}
+            for oid, o in (market.get("outcomes") or {}).items():
+                q = (o.get("players") or {}).get("0") or {}
+                if q.get("price") and q.get("active", True):
+                    priced[(m["marketName"], m.get("handicap") or 0)].append((names.get(int(oid), oid), q["price"]))
+        print(f"  Prices on {site} (decimal, open only):")
+        for (name, line), sides in sorted(priced.items(), key=lambda kv: (keep.index(kv[0][0]), kv[0][1]))[:60]:
+            print(f"    {name:26s} {line:>5}  " + "  ".join(f"{side} {price}" for side, price in sorted(sides, key=str)))
     quota(key, "after")
     return 0
 

@@ -45,7 +45,7 @@
 	<div class="intro">
 		<h1 class="display">Odds slips</h1>
 		<p class="lede">
-			Each day, the model’s most likely outcomes combined into slips of about 2, 3, 5, 10, 20 and 30 odds. Every bet is in a market the betting sites list (result, double chance, total goals, a team’s goals, both teams to score).
+			Each day, the model’s most confident picks (each {pct0(odds.min_leg_p ?? 0.8)} or more likely) combined into slips of about 2, 3, 5, 10, 20 and 30 odds. A slip is only made when the day has enough confident picks to reach it, so quiet days have only the small slips. Every bet is in a market the betting sites list (result, double chance, total goals, a team’s goals, both teams to score).
 		</p>
 		<div class="notice">
 			<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5" /><path d="M8 7.2v4" /><circle cx="8" cy="4.8" r=".6" fill="currentColor" /></svg>
@@ -93,7 +93,7 @@
 				{/if}
 			</section>
 		{:else}
-			<p class="empty">No {pickedTarget}-odds slip for this day: there are not enough matches to reach it. Try a smaller target.</p>
+			<p class="empty">No {pickedTarget}-odds slip for this day: there are not enough confident picks ({pct0(odds.min_leg_p ?? 0.8)} or more) to reach it. Try a smaller target.</p>
 		{/if}
 
 		{#if record.length}

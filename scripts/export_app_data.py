@@ -183,6 +183,8 @@ def export_odds(conn: psycopg.Connection, rules: dict, out_path: Path) -> dict:
         tier = UNRATED if league not in RATED_LEAGUES else TIERS.index(tier_for(rules, market, MARKETS[market].family, float(prob)))
         slip["legs"].append({"match": mid, "league": league, "kickoff": kickoff.isoformat(), "home": home, "away": away, "bet": accas.label(market, line, sel, home, away), "market": accas.site_market(market, home, away),
                              "p": round(float(prob), 4), "tier": tier, "outcome": OUTCOME.get(result, 3)})
+    # Slips are never edited once stored, so ones made under older rules with a weaker leg are left out of the page instead (the stored rows stay).
+    slips = {acc: slip for acc, slip in slips.items() if all(leg["p"] >= accas.P_MIN - 1e-4 for leg in slip["legs"])}
     for slip in slips.values():
         outcomes = [leg["outcome"] for leg in slip["legs"]]
         slip["status"] = "lost" if 0 in outcomes else "pending" if 3 in outcomes else "won"      # a leg that was void or returned its stake drops out of the slip
@@ -196,7 +198,7 @@ def export_odds(conn: psycopg.Connection, rules: dict, out_path: Path) -> dict:
     avail = accas.load_availability()
     availability = {"site": avail["site"], "leagues": {lg: {"confirmed_on": avail["leagues"].get(lg, avail["default"])["confirmed_on"],
                                                            "lines_confirmed": avail["leagues"].get(lg, avail["default"])["lines_confirmed"]} for lg in sorted(RATED_LEAGUES)}}
-    out = {"generated_at": datetime.now(UTC).isoformat(timespec="seconds"), "rules": accas.RULES, "availability": availability,
+    out = {"generated_at": datetime.now(UTC).isoformat(timespec="seconds"), "rules": accas.RULES, "min_leg_p": accas.P_MIN, "availability": availability,
            "days": [{"date": d, "slips": sorted(v, key=lambda x: x["target"])} for d, v in sorted(days.items(), reverse=True)], "record": record}
     out_path.write_text(json.dumps(out, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
     return out
