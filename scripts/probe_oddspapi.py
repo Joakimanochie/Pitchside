@@ -184,8 +184,23 @@ def main() -> int:
         print(f"  Prices on {site} (decimal, open only):")
         for (name, line), sides in sorted(priced.items(), key=lambda kv: (keep.index(kv[0][0]), kv[0][1]))[:60]:
             print(f"    {name:26s} {line:>5}  " + "  ".join(f"{side} {price}" for side, price in sorted(sides, key=str)))
+    coverage(key, cand, slugs)
     quota(key, "after")
     return 0
+
+
+def coverage(key: str, cand: list, slugs: dict) -> None:
+    """Does the feed carry SportyBet at all? One call per league asks for every fixture's prices from SportyBet and bet365 (as a control) and counts what comes back."""
+    print("\nSportyBet's own record in the bookmaker list:", {k: v for k, v in (slugs.get("sportybet") or {}).items() if k in ("bookmakerName", "slug", "active", "liveOdds", "cloneOf", "availableCountries")} or "missing")
+    for lg, tid in cand:
+        data = call("/odds-by-tournaments", key, tournamentIds=tid, bookmakers="sportybet,bet365")
+        if failed(data):
+            print(f"  {lg}: call failed:", data)
+            continue
+        fixtures = rows(data) or ([data] if isinstance(data, dict) and data.get("bookmakerOdds") is not None else [])
+        counts = {s: [len((f.get("bookmakerOdds") or {}).get(s, {}).get("markets") or {}) for f in fixtures] for s in ("sportybet", "bet365")}
+        print(f"  {lg}: {len(fixtures)} fixtures returned; fixtures with prices from sportybet: {sum(1 for n in counts['sportybet'] if n)}, from bet365: {sum(1 for n in counts['bet365'] if n)};"
+              f" markets per fixture sportybet {counts['sportybet']}, bet365 {counts['bet365']}")
 
 
 if __name__ == "__main__":
