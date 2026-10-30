@@ -23,18 +23,19 @@ A prediction near the usual rate carries almost no information, so a 95% "Over 0
 (5%, 1.5%, 3 and 5 points, 200) are fixed in `src/pitchside/confidence.py`; which cells reach which tier comes from the backtest.
 
 ## Evidence
-`scripts/backtest_tiers.py` prices every market (176 markets, 945 selections per match) for 1,400 random verified matches played from 2025/26 onward
-with the production settings and settles each selection (1.32 million rows). `scripts/build_tiers.py` fits the rules on the earlier 60% of matches and checks them on the later 40%
-(matches played after 2026-02-28 that the rules never saw):
+`scripts/backtest_tiers.py` and the count, card-timing and player backtests supply the stored selection-level snapshots. The shipped rules use 8,300 match-level
+observations from 2022-08-05 through 2026-09-20 (3,801,741 selections), with a strict exclusive data cutoff of 2026-10-08. `scripts/build_tiers.py` fits on the earlier
+60% of that time-ordered data (6,429 matches, before 2026-01-09) and checks on the later 40% (1,871 matches). These held-out results are:
 
 | Tier | Share of predictions | Model said | Happened | Better than the base rate by |
 |---|---|---|---|---|
-| High | 20.6% | 40.7% | 40.8% | 7.2% |
-| Medium | 39.2% | 22.3% | 22.4% | 3.3% |
-| Low | 40.2% | 41.4% | 41.2% | 1.2% |
+| High | 12.0% | 42.7% | 42.7% | 8.2% |
+| Medium | 66.1% | 17.5% | 18.2% | 7.2% |
+| Low | 22.0% | 41.1% | 41.1% | 1.1% |
 
-Higher tiers did better in every market family (A to E), and the probabilities in each tier matched what happened to within 0.2 points.
-The final rules in `data/confidence_rules.json` are refitted on all 1,400 matches.
+Higher tiers did better overall and within each market family with adequate samples. Player markets (family I) are capped at Medium pending a stronger baseline;
+they are not eligible for High even where the uncapped statistical cell qualifies. The final rules in `data/confidence_rules.json` are fitted on all available
+pre-cutoff data, and each new prediction stores its tier and the SHA-256 hash of the rules used on its prediction run.
 
 ## Known limits
 - Selections from the same match move together, so the effective sample is closer to the number of matches than the number of rows.

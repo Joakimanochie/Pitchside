@@ -92,7 +92,7 @@
 	<!-- coverage -->
 	<section id="covered" class="block">
 		<h2 class="h2">What is covered</h2>
-		<p class="lede">Every upcoming match in these competitions, refreshed every morning, with team lineups used once they are announced.</p>
+		<p class="lede">Every upcoming match in these competitions, refreshed every morning, with statistical estimates and a scored record.</p>
 		<ul class="chips" aria-label="Competitions">
 			<li>Premier League</li>
 			<li>La Liga</li>

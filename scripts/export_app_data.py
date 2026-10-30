@@ -136,14 +136,14 @@ def export_results(conn: psycopg.Connection, rules: dict, out_dir: Path) -> list
                 runs[line] = (run_id, created, version)
         preds: dict = {}
         picks = picks_hit = high = high_hit = unscored = 0
-        for market, line, sel, prob, is_pick, result in conn.execute(
-                "SELECT p.market_id, p.line, p.selection, p.probability, p.is_pick, s.result FROM predictions p LEFT JOIN settlements s ON s.prediction_id = p.id "
+        for market, line, sel, prob, is_pick, stored_tier, result in conn.execute(
+                "SELECT p.market_id, p.line, p.selection, p.probability, p.is_pick, p.confidence_tier, s.result FROM predictions p LEFT JOIN settlements s ON s.prediction_id = p.id "
                 "WHERE p.match_id = %s AND p.run_id = ANY(%s) ORDER BY p.id", (mid, [r[0] for r in runs.values()])):
             if market not in MARKETS:
                 continue
             if MARKETS[market].family == 'I' and MARKETS[market].player_stat not in LOG_STATS and league not in RATED_LEAGUES:
                 continue
-            tier = UNRATED if league not in RATED_LEAGUES else TIERS.index(tier_for(rules, market, MARKETS[market].family, float(prob)))
+            tier = UNRATED if league not in RATED_LEAGUES else TIERS.index(stored_tier.capitalize() if stored_tier else tier_for(rules, market, MARKETS[market].family, float(prob)))
             outcome = OUTCOME.get(result, 3)
             preds.setdefault(market, {}).setdefault("null" if line is None else str(float(line)), []).append([sel, round(float(prob), 4), 1 if is_pick else 0, tier, outcome])
             if outcome == 3:
@@ -172,15 +172,15 @@ def export_odds(conn: psycopg.Connection, rules: dict, out_path: Path) -> dict:
     """The daily 2 to 30 odds slips with how every leg and slip turned out, and the record of finished slips against what the model expected of them."""
     rows = [] if conn.execute("SELECT to_regclass('accumulators')").fetchone()[0] is None else conn.execute(
         "SELECT a.id, a.slip_date, a.target_odds, a.fair_odds, a.win_probability, l.position, p.id, m.id, m.league_id, m.kickoff, th.canonical_name, ta.canonical_name, "
-        "p.market_id, p.line, p.selection, p.probability, s.result "
+        "p.market_id, p.line, p.selection, p.probability, p.confidence_tier, s.result "
         "FROM accumulators a JOIN accumulator_legs l ON l.accumulator_id = a.id JOIN predictions p ON p.id = l.prediction_id JOIN matches m ON m.id = l.match_id "
         "JOIN teams th ON th.id = m.home_team_id JOIN teams ta ON ta.id = m.away_team_id LEFT JOIN settlements s ON s.prediction_id = p.id "
         "WHERE a.slip_date >= current_date - 30 ORDER BY a.slip_date DESC, a.target_odds, l.position").fetchall()
     slips: dict = {}
-    for acc, day, target, fair, win_p, pos, pid, mid, league, kickoff, home, away, market, line, sel, prob, result in rows:
+    for acc, day, target, fair, win_p, pos, pid, mid, league, kickoff, home, away, market, line, sel, prob, stored_tier, result in rows:
         slip = slips.setdefault(acc, {"date": day.isoformat(), "target": float(target), "fair_odds": float(fair), "p": float(win_p), "legs": []})
         line = None if line is None else float(line)
-        tier = UNRATED if league not in RATED_LEAGUES else TIERS.index(tier_for(rules, market, MARKETS[market].family, float(prob)))
+        tier = UNRATED if league not in RATED_LEAGUES else TIERS.index(stored_tier.capitalize() if stored_tier else tier_for(rules, market, MARKETS[market].family, float(prob)))
         slip["legs"].append({"match": mid, "league": league, "kickoff": kickoff.isoformat(), "home": home, "away": away, "bet": accas.label(market, line, sel, home, away), "market": accas.site_market(market, home, away),
                              "p": round(float(prob), 4), "tier": tier, "outcome": OUTCOME.get(result, 3)})
     # Slips are never edited once stored, so ones made under older rules with a weaker leg are left out of the page instead (the stored rows stay).

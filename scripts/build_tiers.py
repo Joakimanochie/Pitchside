@@ -3,9 +3,10 @@
 1. Rules are fitted on the earlier 60% of the held-out matches (by date) and checked on the later 40%: a tier only means something if
    High predictions beat Medium and Medium beat Low on matches the rules never saw.
 2. Final rules are then refitted on all of it and written to data/confidence_rules.json.
-Usage: uv run python scripts/build_tiers.py
+Usage: uv run python scripts/build_tiers.py [exclusive-date-cutoff]
 """
 import json
+import sys
 from pathlib import Path
 
 import pandas as pd
@@ -39,6 +40,13 @@ def main() -> None:
         if Path(extra).exists():
             df = pd.concat([df, pd.read_csv(extra, parse_dates=["date"])], ignore_index=True)
     df["line"] = df["line"].astype(float)
+    df["date"] = pd.to_datetime(df["date"], utc=True)
+    # Freeze the evidence before the live predictions being rated. A later
+    # rerun must not silently pull current live results into the rules.
+    cutoff = pd.Timestamp(sys.argv[1] if len(sys.argv) > 1 else "2026-10-08", tz="UTC")
+    df = df[df["date"] < cutoff].copy()
+    if df.empty:
+        raise SystemExit(f"no backtest rows before {cutoff.date()}")
     cut = df["date"].sort_values().iloc[int(len(df) * 0.6)]
     fit, test = df[df["date"] < cut], df[df["date"] >= cut]
     # the player datasets number their rows, not matches, so matches are counted from the team-level markets only
@@ -64,6 +72,7 @@ def main() -> None:
                            "tiers": [{"tier": r.tier, "share": round(float(r.share), 4), "predicted": round(float(r.avg_predicted), 4), "happened": round(float(r.happened), 4),
                                       "skill": round(float(r.skill_vs_base), 4)} for r in check.itertuples()]}
     final["backtest"] = {"matches": int(team(df)), "from": str(df["date"].min().date()), "to": str(df["date"].max().date()), "selections": len(df)}
+    final["rules_data_cutoff_exclusive"] = str(cutoff.date())
     all_rows = score_rows(df, base_rates(df))
     all_rows["tier"] = [tier_for(final, m, f, p) for m, f, p in zip(all_rows["market_id"], all_rows["family"], all_rows["p"], strict=True)]
     print("\nFINAL RULES, all matches (in-sample, for the share of each tier only)")

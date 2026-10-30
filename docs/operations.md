@@ -25,8 +25,8 @@ and the predictions are settled again if the two differ. A failed run opens a "R
 
 ## Database guards
 
-Migration 011 makes the database refuse an official (weekly) prediction inserted after kickoff, or a second official run of the same model version for the same match and market.
-Backtest runs are exempt, and `--force` on the weekly job lifts the guards for that session only.
+Migrations 011 and 013 make the database refuse an official prediction inserted after kickoff or a second official run of the same model version for the same match.
+Backtest runs are exempt. `--force` retries fixture selection but never disables these database guards; use a new model version when a genuinely new official prediction is needed.
 
 ## One-time setup (only you can do this)
 
@@ -46,7 +46,7 @@ uv run python -m pitchside.settle.settle          # settle only
 uv run python -m pitchside.db.migrate             # apply new database migrations
 ```
 
-Flags: `--force` predicts again even for matches already predicted (creates a second run; use for testing only),
+Flags: `--force` retries matches already selected by the pipeline query (the database still rejects duplicate official runs),
 `--no-ingest` skips the results download.
 
 ## Reading the track record

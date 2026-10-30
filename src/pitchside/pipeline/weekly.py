@@ -497,8 +497,8 @@ def run_leagues(conn: psycopg.Connection, league_ids: list[str], days: int = 8, 
     conn.commit()
     report: dict = {lid: {} for lid in league_ids}
     errors: dict = {}
-    if force:       # --force writes a second official run for a match: the database guards (migration 011) are lifted for this session only
-        conn.execute("SET pitchside.unsafe_writes = 'on'")
+    # --force retries selection of the fixtures, but the database remains the
+    # authority: it refuses a second official run for a match/model version.
 
     def attempt(key: str, section: str, fn, *args):
         try:
@@ -543,7 +543,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--league", nargs="+", default=["ALL"], help="league ids (EPL LALIGA ...) or ALL")
     ap.add_argument("--days", type=int, default=8)
-    ap.add_argument("--force", action="store_true")
+    ap.add_argument("--force", action="store_true", help="retry fixture selection; database guards still reject duplicate official runs")
     ap.add_argument("--no-ingest", action="store_true")
     args = ap.parse_args()
     _load_env()
