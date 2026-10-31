@@ -74,7 +74,7 @@
 			<section class="slip" aria-label="{slip.target} odds slip">
 				<header class="slip-head">
 					<div><span class="big-odds">{slip.fair_odds.toFixed(2)}</span><span class="muted"> fair odds · {slip.legs.length} {slip.legs.length === 1 ? 'bet' : 'bets'}</span></div>
-					<div class="chance"><b>{pct0(slip.p)}</b><small>chance every bet wins</small></div>
+					<div class="chance"><b>{pct0(slip.p)}</b><small>chance all {slip.legs.length} bets win</small></div>
 					<span class="status status-{slip.status}">{statusWord[slip.status]}</span>
 				</header>
 				<ol class="legs">
@@ -87,7 +87,7 @@
 						</li>
 					{/each}
 				</ol>
-				<p class="muted small">Stored before the first kickoff and never changed. Place each bet separately on the site you use, and check the price and that the market is open for that match.</p>
+				<p class="muted small">These are model fair odds, not an offered return. Each pick was stored before its match kicked off and never changed. Place each bet separately, and check the bookmaker’s price and that the market is open for that match.</p>
 				{#if unchecked.length}
 					<p class="muted small">Bets are limited to markets {site} lists. The exact goal lines have not yet been checked on {site} for {unchecked.join(', ')}, so a line may be missing for a match: if it is, skip that bet.</p>
 				{/if}

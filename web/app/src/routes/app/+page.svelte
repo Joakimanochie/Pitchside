@@ -61,8 +61,18 @@
 	{/each}
 	{#if !shown.length}
 		<p class="empty">
-			{upcoming.length ? 'No matches still to be played in this league.' : 'Every match in the window has kicked off.'}
-			Matches already played are in <a href="/app/results">Results</a>; new fixtures arrive each morning.
+			{#if query.trim()}
+				No clubs match “{query.trim()}”{ui.league === 'ALL' ? '' : ` in ${index.leagues[ui.league] ?? ui.league}`}.
+				<button class="text-button" type="button" onclick={() => (query = '')}>Clear search</button>
+			{:else}
+				{upcoming.length ? 'No matches still to be played in this league.' : 'Every match in the window has kicked off.'}
+				Matches already played are in <a href="/app/results">Results</a>; new fixtures arrive each morning.
+			{/if}
 		</p>
 	{/if}
 </div>
+
+<style>
+	.text-button { border: 0; padding: 0; background: none; color: var(--accent, var(--ink)); font: inherit; text-decoration: underline; cursor: pointer; }
+	.text-button:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 2px; }
+</style>
