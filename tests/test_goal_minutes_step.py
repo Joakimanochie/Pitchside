@@ -79,32 +79,57 @@ def test_data_not_published_yet_is_left_untouched_and_retried(db):
     assert ingest_goal_minutes(db, "EPL", 2026, client_factory=factory(later))["loaded"] == 1 and flag(db, mid) == "true"
 
 
-def test_understat_being_down_is_reported_not_raised_and_nothing_is_flagged(db):
-    mid = add_match(db, "Arsenal", "Leeds United", (2, 0), (1, 0))
+def broken_understat(error):
+    class Broken(FakeUnderstat):
+        def read_schedule(self):
+            raise error
+    return factory(Broken(GAMES, {}))
+
+
+@pytest.fixture()
+def espn(monkeypatch):
+    """Stands in for the ESPN goal-minutes route, recording how it was called."""
+    calls = []
+
+    def fake(conn, league_id, espn_code, retry_from, session=None, since=None):
+        calls.append({"league": league_id, "code": espn_code, "retry_from": retry_from, "since": since})
+        return {"pending": 1, "loaded": 1, "unverified": 0, "unavailable": 0}
+
+    monkeypatch.setattr("pitchside.pipeline.goal_minutes.ingest_espn_goals", fake)
+    return calls
+
+
+def test_understat_being_down_falls_back_to_espn_and_says_so(db, espn):
+    add_match(db, "Arsenal", "Leeds United", (2, 0), (1, 0))
 
     class Maintenance(FakeUnderstat):
         def read_schedule(self):       # what soccerdata raises when Understat serves its "We will come back soon" HTML page
             raise json.JSONDecodeError("Expecting value", "<html>We will come back soon</html>", 0)
 
     out = ingest_goal_minutes(db, "EPL", 2026, client_factory=factory(Maintenance(GAMES, {})))
-    assert out["pending"] == 1 and out["unavailable"] == 1 and out["loaded"] == 0 and out["source_error"].startswith("JSONDecodeError")
-    assert flag(db, mid) is None and pending_matches(db, "EPL", 2026) == {_ids(db, "Arsenal", "Leeds United")}      # retried once it is back
-    back = FakeUnderstat(GAMES, {1: [shot(1, "Arsenal", 20), shot(1, "Arsenal", 70)]})
-    assert ingest_goal_minutes(db, "EPL", 2026, client_factory=factory(back))["loaded"] == 1 and flag(db, mid) == "true"
+    assert out["loaded"] == 1 and out["source"] == "espn" and out["source_error"].startswith("JSONDecodeError")
+    today = datetime.now(UTC).date()
+    assert espn == [{"league": "EPL", "code": "eng.1", "retry_from": today - timedelta(days=3), "since": today - timedelta(days=45)}]
 
 
-def test_a_connection_failure_is_an_outage_but_a_real_bug_still_fails(db):
+def test_a_connection_failure_also_falls_back_but_a_real_bug_still_fails(db, espn):
+    add_match(db, "Arsenal", "Leeds United", (2, 0), (1, 0))
+    assert ingest_goal_minutes(db, "EPL", 2026, client_factory=broken_understat(ConnectionError("refused")))["source"] == "espn"
+    espn.clear()
+    with pytest.raises(KeyError):      # a change in our own code or in the library's data shape is not excused, and ESPN is not asked
+        ingest_goal_minutes(db, "EPL", 2026, client_factory=broken_understat(KeyError("game_id")))
+    assert espn == []
+
+
+def test_if_espn_fails_too_the_step_fails(db, monkeypatch):
     add_match(db, "Arsenal", "Leeds United", (2, 0), (1, 0))
 
-    def broken(error):
-        class Broken(FakeUnderstat):
-            def read_schedule(self):
-                raise error
-        return factory(Broken(GAMES, {}))
+    def espn_down(*a, **k):
+        raise ConnectionError("espn unreachable")
 
-    assert ingest_goal_minutes(db, "EPL", 2026, client_factory=broken(ConnectionError("refused")))["unavailable"] == 1
-    with pytest.raises(KeyError):      # a change in our own code or in the library's data shape is not excused
-        ingest_goal_minutes(db, "EPL", 2026, client_factory=broken(KeyError("game_id")))
+    monkeypatch.setattr("pitchside.pipeline.goal_minutes.ingest_espn_goals", espn_down)
+    with pytest.raises(ConnectionError):
+        ingest_goal_minutes(db, "EPL", 2026, client_factory=broken_understat(json.JSONDecodeError("Expecting value", "", 0)))
 
 
 def test_a_recent_mismatch_is_flagged_but_retried_an_old_one_is_not(db):

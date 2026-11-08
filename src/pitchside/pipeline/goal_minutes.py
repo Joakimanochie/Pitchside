@@ -1,4 +1,5 @@
 """Daily step: fetch goal minutes (Understat) for matches that just finished and verify them against the real scores.
+If Understat is down (or a league has no Understat coverage) the minutes come from ESPN instead, under the same verification rule.
 
 Polite by design: it asks Understat only for matches we do not have verified minutes for, never the whole season.
   - A match whose shot data is not published yet is left untouched and retried on the next run.
@@ -29,6 +30,12 @@ def understat_client(league_name: str, season: int):
     return sd.Understat(league_name, str(season))
 
 
+def _from_espn(conn: psycopg.Connection, league_id: str) -> dict:
+    """Goal minutes from ESPN for recent finished matches without a verdict: the route for leagues Understat does not cover, and the fallback when it is down."""
+    today = datetime.now(UTC).date()      # only recent matches: older ones are never settled, so their minutes are not worth a request each
+    return ingest_espn_goals(conn, league_id, LEAGUES[league_id].espn_code, today - timedelta(days=RETRY_DAYS), since=today - timedelta(days=45))
+
+
 def _source_is_down(error: Exception) -> bool:
     """True for what an outage looks like from here: the reply was not JSON (a maintenance or error page) or the connection failed. Anything else is a bug and must still fail."""
     names = {c.__name__ for c in type(error).__mro__}
@@ -48,8 +55,7 @@ def pending_matches(conn: psycopg.Connection, league_id: str, season: int) -> se
 def ingest_goal_minutes(conn: psycopg.Connection, league_id: str, season: int | None = None,
                         client_factory: Callable = understat_client) -> dict:
     if LEAGUES[league_id].understat is None:      # no Understat coverage: this league's goal minutes come from ESPN
-        today = datetime.now(UTC).date()      # only recent matches: older ones are never settled, so their minutes are not worth a request each
-        return ingest_espn_goals(conn, league_id, LEAGUES[league_id].espn_code, today - timedelta(days=RETRY_DAYS), since=today - timedelta(days=45))
+        return _from_espn(conn, league_id)
     season = current_season() if season is None else season
     pending = pending_matches(conn, league_id, season)
     if not pending:
@@ -61,10 +67,11 @@ def ingest_goal_minutes(conn: psycopg.Connection, league_id: str, season: int | 
     except Exception as e:      # only an outage is excused (see _source_is_down); anything else is re-raised
         if not _source_is_down(e):
             raise
-        # Understat is down (its maintenance page, 2026-11-02 onwards, comes back as HTML with a normal status) or unreachable. Nothing was read, so nothing is flagged:
-        # every pending match stays pending and is asked for again on the next run, and its goal-minute markets settle then, as for a match whose data is not published yet.
-        log.warning("Understat unavailable for %s (%s: %s); %d matches stay pending", league_id, type(e).__name__, e, len(pending))
-        return {"pending": len(pending), "fetched": 0, "loaded": 0, "unavailable": len(pending), "source_error": f"{type(e).__name__}: {e}"}
+        # Understat is down (its maintenance page, 2026-11-02 onwards, comes back as HTML with a normal status) or unreachable. Nothing was read from it, so the goal minutes
+        # come from ESPN instead, under the same rule (the goals must add up to the real full-time and half-time scores, else the match is flagged unverified). If ESPN
+        # fails too that error propagates and the job fails: a red run now means both sources are down.
+        log.warning("Understat unavailable for %s (%s: %s); using ESPN", league_id, type(e).__name__, e)
+        return {**_from_espn(conn, league_id), "source": "espn", "source_error": f"{type(e).__name__}: {e}"}
     resolver = TeamResolver(conn)
     ids = resolver.resolve_all(SOURCE, [*schedule["home_team"], *schedule["away_team"]])
     wanted = schedule[[(ids[h], ids[a]) in pending for h, a in zip(schedule["home_team"], schedule["away_team"], strict=True)]]
