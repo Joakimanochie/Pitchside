@@ -1,3 +1,4 @@
+import json
 from datetime import UTC, datetime, timedelta
 
 import pandas as pd
@@ -76,6 +77,34 @@ def test_data_not_published_yet_is_left_untouched_and_retried(db):
     assert out["loaded"] == 0 and out["unavailable"] == 1 and flag(db, mid) is None     # NOT flagged unverified
     later = FakeUnderstat(GAMES, {1: [shot(1, "Arsenal", 20), shot(1, "Arsenal", 70)]})
     assert ingest_goal_minutes(db, "EPL", 2026, client_factory=factory(later))["loaded"] == 1 and flag(db, mid) == "true"
+
+
+def test_understat_being_down_is_reported_not_raised_and_nothing_is_flagged(db):
+    mid = add_match(db, "Arsenal", "Leeds United", (2, 0), (1, 0))
+
+    class Maintenance(FakeUnderstat):
+        def read_schedule(self):       # what soccerdata raises when Understat serves its "We will come back soon" HTML page
+            raise json.JSONDecodeError("Expecting value", "<html>We will come back soon</html>", 0)
+
+    out = ingest_goal_minutes(db, "EPL", 2026, client_factory=factory(Maintenance(GAMES, {})))
+    assert out["pending"] == 1 and out["unavailable"] == 1 and out["loaded"] == 0 and out["source_error"].startswith("JSONDecodeError")
+    assert flag(db, mid) is None and pending_matches(db, "EPL", 2026) == {_ids(db, "Arsenal", "Leeds United")}      # retried once it is back
+    back = FakeUnderstat(GAMES, {1: [shot(1, "Arsenal", 20), shot(1, "Arsenal", 70)]})
+    assert ingest_goal_minutes(db, "EPL", 2026, client_factory=factory(back))["loaded"] == 1 and flag(db, mid) == "true"
+
+
+def test_a_connection_failure_is_an_outage_but_a_real_bug_still_fails(db):
+    add_match(db, "Arsenal", "Leeds United", (2, 0), (1, 0))
+
+    def broken(error):
+        class Broken(FakeUnderstat):
+            def read_schedule(self):
+                raise error
+        return factory(Broken(GAMES, {}))
+
+    assert ingest_goal_minutes(db, "EPL", 2026, client_factory=broken(ConnectionError("refused")))["unavailable"] == 1
+    with pytest.raises(KeyError):      # a change in our own code or in the library's data shape is not excused
+        ingest_goal_minutes(db, "EPL", 2026, client_factory=broken(KeyError("game_id")))
 
 
 def test_a_recent_mismatch_is_flagged_but_retried_an_old_one_is_not(db):

@@ -5,6 +5,7 @@ Polite by design: it asks Understat only for matches we do not have verified min
   - A match whose goals do not add up to the real score is flagged unverified (its goal-minute markets stay
     'not_scorable'); matches that finished in the last RETRY_DAYS days are retried, in case Understat was still updating.
 """
+import json
 import logging
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
@@ -28,6 +29,12 @@ def understat_client(league_name: str, season: int):
     return sd.Understat(league_name, str(season))
 
 
+def _source_is_down(error: Exception) -> bool:
+    """True for what an outage looks like from here: the reply was not JSON (a maintenance or error page) or the connection failed. Anything else is a bug and must still fail."""
+    names = {c.__name__ for c in type(error).__mro__}
+    return isinstance(error, json.JSONDecodeError | OSError) or bool(names & {"HTTPError", "ConnectionError", "Timeout", "TimeoutException", "ConnectError"})
+
+
 def pending_matches(conn: psycopg.Connection, league_id: str, season: int) -> set[tuple[int, int]]:
     """(home_team_id, away_team_id) of finished matches still needing verified goal minutes."""
     retry_from = (datetime.now(UTC) - timedelta(days=RETRY_DAYS)).date()
@@ -49,7 +56,15 @@ def ingest_goal_minutes(conn: psycopg.Connection, league_id: str, season: int | 
         return {"pending": 0, "fetched": 0, "loaded": 0}
 
     us = client_factory(LEAGUES[league_id].understat, season)
-    schedule = us.read_schedule().reset_index()
+    try:
+        schedule = us.read_schedule().reset_index()
+    except Exception as e:      # only an outage is excused (see _source_is_down); anything else is re-raised
+        if not _source_is_down(e):
+            raise
+        # Understat is down (its maintenance page, 2026-11-02 onwards, comes back as HTML with a normal status) or unreachable. Nothing was read, so nothing is flagged:
+        # every pending match stays pending and is asked for again on the next run, and its goal-minute markets settle then, as for a match whose data is not published yet.
+        log.warning("Understat unavailable for %s (%s: %s); %d matches stay pending", league_id, type(e).__name__, e, len(pending))
+        return {"pending": len(pending), "fetched": 0, "loaded": 0, "unavailable": len(pending), "source_error": f"{type(e).__name__}: {e}"}
     resolver = TeamResolver(conn)
     ids = resolver.resolve_all(SOURCE, [*schedule["home_team"], *schedule["away_team"]])
     wanted = schedule[[(ids[h], ids[a]) in pending for h, a in zip(schedule["home_team"], schedule["away_team"], strict=True)]]
